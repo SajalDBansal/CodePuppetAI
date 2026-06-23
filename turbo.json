@@ -1,24 +1,84 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalEnv": [
+    "APP_NAME",
+    "BETTER_AUTH_SECRET",
+    "BETTER_AUTH_URL",
+    "DATABASE_URL",
+    "NODE_ENV",
+    "PORT",
+    "WEB_ORIGIN"
+  ],
   "ui": "tui",
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**"]
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env*"
+      ],
+      "outputs": [
+        "dist/**",
+        ".next/**",
+        "!.next/cache/**",
+        "!.next/dev/**",
+        "public/dist/**",
+        "generated/**"
+      ],
+      "env": [
+        "NEXT_PUBLIC_API_HOST"
+      ]
+    },
+    "test": {
+      "outputs": [
+        "coverage/**"
+      ],
+      "dependsOn": []
+    },
+    "db:migrate:dev": {
+      "cache": false
+    },
+    "db:migrate:deploy": {
+      "cache": false
+    },
+    "db:push": {
+      "cache": false
+    },
+    "db:seed": {
+      "cache": false
     },
     "lint": {
-      "dependsOn": ["^lint"]
+      "dependsOn": [
+        "^lint"
+      ]
     },
     "format": {
-      "dependsOn": ["^format"]
+      "dependsOn": [
+        "^format"
+      ]
     },
     "typecheck": {
-      "dependsOn": ["^typecheck"]
+      "dependsOn": [
+        "^typecheck"
+      ]
     },
     "dev": {
+      "dependsOn": [
+        "^generate"
+      ],
       "cache": false,
       "persistent": true
+    },
+    "generate": {
+      "dependsOn": [
+        "^generate"
+      ],
+      "cache": false
+    },
+    "clean": {
+      "cache": false
     }
   }
 }
