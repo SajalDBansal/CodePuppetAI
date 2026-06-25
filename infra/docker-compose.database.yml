@@ -1,0 +1,60 @@
+services:
+  db:
+    platform: linux/amd64
+    image: postgres:15 # Use a specific version of Postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=sebi
+      - POSTGRES_PASSWORD=sebi_test_4444
+      - POSTGRES_DB=codeai
+    ports:
+      - '5432:5432' # Expose the Postgres port to your local machine
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sebi -d codeai"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+  web:
+    container_name: web
+    build:
+      context: ..
+      dockerfile: ./apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_HOST: ${NEXT_PUBLIC_API_HOST:-http://localhost:3001}
+    restart: always
+    ports:
+      - 3000:3000
+    networks:
+      - app_network
+    depends_on:
+      - api
+  api:
+    container_name: api
+    build:
+      context: ..
+      dockerfile: ./infra/docker/backend/Dockerfile
+    restart: always
+    env_file:
+      - ../apps/api/.env
+    environment:
+      DATABASE_URL: postgresql://sebi:sebi_test_4444@db:5432/codeai
+    ports:
+      - 3001:3001
+    networks:
+      - app_network
+    depends_on:
+      db:
+        condition: service_healthy
+
+# Define a network, which allows containers to communicate
+# with each other, by using their container name as a hostname
+networks:
+  app_network:
+
+volumes:
+  postgres_data:
+    driver: local
