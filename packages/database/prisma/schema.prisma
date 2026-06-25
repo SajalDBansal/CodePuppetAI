@@ -1,0 +1,149 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/client"
+}
+
+model User {
+  id            String               @id
+  name          String
+  email         String
+  emailVerified Boolean              @default(false)
+  image         String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  role          String               @default("user")
+  banned        Boolean?             @default(false)
+  banReason     String?
+  banExpires    DateTime?
+  sessions      Session[]
+  accounts      Account[]
+  credentials   ProviderCredential[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id             String   @id
+  expiresAt      DateTime
+  token          String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  ipAddress      String?
+  userAgent      String?
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  impersonatedBy String?
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+model DeviceCode {
+  id              String    @id
+  deviceCode      String    @unique
+  userCode        String    @unique
+  userId          String?
+  expiresAt       DateTime
+  status          String
+  lastPolledAt    DateTime?
+  pollingInterval Int?
+  clientId        String?
+  scope           String?
+  deviceName      String?
+
+  @@map("deviceCode")
+}
+
+model ProviderCatalog {
+  id          String   @id @default(uuid())
+  displayName String
+  providerId  String   @unique
+  description String?
+  docsUrl     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  isDefault   Boolean  @default(false)
+
+  modelCatalogs       ModelCatalog[]
+  providerCredentials ProviderCredential[]
+}
+
+model ModelCatalog {
+  id              String          @id @default(uuid())
+  providerId      String
+  provider        ProviderCatalog @relation(fields: [providerId], references: [providerId], onDelete: Cascade)
+  modelId         String
+  displayName     String
+  description     String?
+  supportsTools   Boolean         @default(false)
+  contextWindow   Int
+  maxOutputTokens Int
+  inputCostPer1M  Int?
+  outputCostPer1M Int?
+  active          Boolean         @default(true)
+  isDefault       Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@unique([providerId, modelId])
+  @@index([providerId, active])
+}
+
+model ProviderCredential {
+  id         String          @id @default(uuid())
+  userId     String
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  providerId String
+  provider   ProviderCatalog @relation(fields: [providerId], references: [providerId], onDelete: Cascade)
+  tag        String
+  ciphertext String
+  iv         String
+  authTag    String
+  keyVersion Int
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@unique([userId, providerId, tag])
+  @@index([userId])
+}
