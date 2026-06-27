@@ -1,0 +1,24 @@
+{
+    "name": "@workspace/harness",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "exports": {
+        ".": "./src/index.ts"
+    },
+    "scripts": {
+        "typecheck": "tsc -p ../../tsconfig.harness.json --noEmit"
+    },
+    "dependencies": {
+        "@workspace/protocol": "*",
+        "axios": "^1.7.9",
+        "fs-extra": "^11.3.5",
+        "keytar": "^7.9.0",
+        "uuid": "^14.0.1",
+        "zod": "^4.4.3"
+    },
+    "devDependencies": {
+        "@types/fs-extra": "^11.0.4",
+        "@types/keytar": "^4.4.2"
+    }
+}
