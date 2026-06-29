@@ -178,6 +178,14 @@
         "@types/keytar": "^4.4.2",
       },
     },
+    "packages/tool-registry": {
+      "name": "@workspace/tool-registry",
+      "version": "0.1.0",
+      "dependencies": {
+        "@workspace/protocol": "*",
+        "zod": "^4.4.3",
+      },
+    },
     "packages/typescript-config": {
       "name": "@workspace/typescript-config",
       "version": "0.0.0",
@@ -962,6 +970,8 @@
     "@workspace/jest-presets": ["@workspace/jest-presets@workspace:packages/jest-presets"],
 
     "@workspace/protocol": ["@workspace/protocol@workspace:packages/protocol"],
+
+    "@workspace/tool-registry": ["@workspace/tool-registry@workspace:packages/tool-registry"],
 
     "@workspace/typescript-config": ["@workspace/typescript-config@workspace:packages/typescript-config"],
 

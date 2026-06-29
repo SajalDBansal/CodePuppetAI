@@ -1,0 +1,17 @@
+{
+    "name": "@workspace/tool-registry",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "exports": {
+        ".": "./src/index.ts"
+    },
+    "scripts": {
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "zod": "^4.4.3",
+        "@workspace/protocol": "*"
+    },
+    "devDependencies": {}
+}
