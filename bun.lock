@@ -178,6 +178,14 @@
         "@types/keytar": "^4.4.2",
       },
     },
+    "packages/provider-registry": {
+      "name": "@workspace/provider-registry",
+      "version": "0.1.0",
+      "dependencies": {
+        "@workspace/protocol": "*",
+        "zod": "^4.4.3",
+      },
+    },
     "packages/tool-registry": {
       "name": "@workspace/tool-registry",
       "version": "0.1.0",
@@ -970,6 +978,8 @@
     "@workspace/jest-presets": ["@workspace/jest-presets@workspace:packages/jest-presets"],
 
     "@workspace/protocol": ["@workspace/protocol@workspace:packages/protocol"],
+
+    "@workspace/provider-registry": ["@workspace/provider-registry@workspace:packages/provider-registry"],
 
     "@workspace/tool-registry": ["@workspace/tool-registry@workspace:packages/tool-registry"],
 
