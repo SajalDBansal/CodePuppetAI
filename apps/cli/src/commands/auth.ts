@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { catalogStore, configStore, vaultStore } from "../utils/harness-config.js";
+import { authStore, catalogStore, configStore, vaultStore } from "../utils/harness-config.js";
 import { logger } from "../utils/logger.js";
 import inquirer from "inquirer";
 
@@ -27,10 +27,25 @@ export function authCommand(program: Command) {
         })
 
     command
-        .command("set")
+        .command("add")
         .description("register an api key for the given provider")
         .action(async () => {
             await setProviderCredential();
+        });
+
+    command
+        .command("set")
+        .description("select which registered api key to use when the provider call executes")
+        .action(async () => {
+            await selectProviderCredential();
+        });
+
+    command
+        .command("check")
+        .description("check the currently selected api key for a provider")
+        .option("-a, --all", "show the selected api key for every provider in a table")
+        .action(async (options: { all?: boolean }) => {
+            await checkProviderCredential(options.all);
         });
 
     command
@@ -89,6 +104,7 @@ async function setProviderCredential(): Promise<void> {
 async function removeProviderCredential(all?: boolean): Promise<void> {
     if (all) {
         const count = await vaultStore.deleteAllCredentials();
+        await authStore.clearAllCredentialMetadata();
         logger.success(`All ${count} API keys have been deleted successfully.`);
         return;
     }
@@ -118,5 +134,78 @@ async function removeProviderCredential(all?: boolean): Promise<void> {
         return;
     }
     const { providerId, tag } = deletedCredential;
+
+    const selected = await authStore.getCredentialMetadata(providerId);
+    if (selected?.id === deletedCredential.id) {
+        await authStore.clearCredentialMetadata(providerId);
+    }
+
     logger.success(`API key with provider '${providerId}' with tag '${tag}' has been deleted successfully.`);
+}
+
+async function selectProviderCredential(): Promise<void> {
+    const credentials = await vaultStore.getAllCredentialsMetadata();
+    if (credentials.length === 0) {
+        logger.info("No API keys found to select. Use 'agent auth add' to register one first.");
+        return;
+    }
+
+    const { credentialId } = await inquirer.prompt([
+        {
+            type: "select",
+            name: "credentialId",
+            message: "Select an API key to use:",
+            choices: credentials.map((credential) => ({
+                name: `Provider: ${credential.providerId}, Tag: ${credential.tag}`,
+                value: credential.id,
+            })),
+        },
+    ]);
+
+    const selectedCredential = credentials.find((credential) => credential.id === credentialId);
+    if (!selectedCredential) {
+        logger.error("Failed to find the credential details.");
+        return;
+    }
+
+    const { providerId, tag } = selectedCredential;
+    await authStore.setCredentialMetaData(providerId, selectedCredential);
+    logger.success(`API key with provider '${providerId}' with tag '${tag}' has been selected for future provider calls.`);
+}
+
+async function checkProviderCredential(all?: boolean): Promise<void> {
+    const credentialMetadata = await authStore.getAllCredentialMetadata();
+    const providerIds = Object.keys(credentialMetadata);
+
+    if (providerIds.length === 0) {
+        logger.info("No provider has a selected API key yet. Use 'agent auth set' to select one.");
+        return;
+    }
+
+    if (all) {
+        const tableData = providerIds.map((providerId) => {
+            const credential = credentialMetadata[providerId]!;
+            return {
+                Provider: providerId,
+                Tag: credential.tag,
+                updatedAt: new Date(credential.updatedAt).toLocaleString(),
+            };
+        });
+        console.table(tableData);
+        return;
+    }
+
+    const { providerId } = await inquirer.prompt([
+        {
+            type: "select",
+            name: "providerId",
+            message: "Select a provider to check:",
+            choices: providerIds.map((providerId) => ({ name: providerId, value: providerId })),
+        },
+    ]);
+
+    const credential = credentialMetadata[providerId]!;
+    logger.success(
+        `Provider '${providerId}' is using API key with tag '${credential.tag}' (last updated ${new Date(credential.updatedAt).toLocaleString()}).`
+    );
 }

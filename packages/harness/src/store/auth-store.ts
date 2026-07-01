@@ -3,6 +3,7 @@ import axios from "axios";
 import { Path } from "../utils/path.js";
 import { VaultStore } from "./vault-store.js";
 import { AuthFileSchema, type AuthFile, type LoginResult } from "../types/auth.js";
+import type { CredentialMetadata } from "../types/credential.js";
 
 export class AuthStore {
     path: Path;
@@ -17,11 +18,13 @@ export class AuthStore {
 
     /** Persist the API url, vault token reference and user details, and save the access token in the vault. */
     async save(login: LoginResult): Promise<void> {
+        const existing = await this.get();
         const auth: AuthFile = {
             apiUrl: this.backendUrl,
             tokenAccount: login.accessToken,
             user: login.user,
             expiresAt: login.expiresAt,
+            credentialMetadata: existing?.credentialMetadata ?? {},
         };
 
         await fs.ensureDir(this.path.getAgentDir());
@@ -81,6 +84,45 @@ export class AuthStore {
             }
             throw error;
         }
+    }
+
+    /** Select a provider's credential to use for future calls, persisting its metadata in the auth file. */
+    async setCredentialMetaData(providerId: string, credential: CredentialMetadata): Promise<void> {
+        const auth = await this.get();
+        if (!auth) throw new Error("Not authenticated. Run 'agent login' first.");
+
+        auth.credentialMetadata[providerId] = credential;
+        await fs.writeJson(this.filePath, auth, { spaces: 2 });
+    }
+
+    /** Get the selected credential metadata for a provider, or null if none is selected. */
+    async getCredentialMetadata(providerId: string): Promise<CredentialMetadata | null> {
+        const auth = await this.get();
+        return auth?.credentialMetadata[providerId] ?? null;
+    }
+
+    /** Get the selected credential metadata for every provider, keyed by provider id. */
+    async getAllCredentialMetadata(): Promise<Record<string, CredentialMetadata>> {
+        const auth = await this.get();
+        return auth?.credentialMetadata ?? {};
+    }
+
+    /** Clear the selected credential metadata for a single provider. */
+    async clearCredentialMetadata(providerId: string): Promise<void> {
+        const auth = await this.get();
+        if (!auth) return;
+
+        delete auth.credentialMetadata[providerId];
+        await fs.writeJson(this.filePath, auth, { spaces: 2 });
+    }
+
+    /** Clear the selected credential metadata for every provider. */
+    async clearAllCredentialMetadata(): Promise<void> {
+        const auth = await this.get();
+        if (!auth) return;
+
+        auth.credentialMetadata = {};
+        await fs.writeJson(this.filePath, auth, { spaces: 2 });
     }
 
 }
