@@ -1,58 +1,30 @@
+import { providers } from "./catalog.js";
 import { prisma } from "./client.js";
-import { modelCatalogSeed } from "./model-catalog.js";
-
 async function seed() {
-    const providers = await Promise.all([
+
+    for (const provider of providers) {
         await prisma.providerCatalog.upsert({
-            where: { providerId: "openai" },
-            update: {},
+            where: { providerId: provider.providerId },
             create: {
-                providerId: "openai",
-                displayName: "OpenAI",
-                description: "OpenAI API models",
-                docsUrl: "https://platform.openai.com/docs/models",
+                providerId: provider.providerId,
+                displayName: provider.displayName,
+                description: provider.description,
+                documentationUrl: provider.documentationUrl,
             },
-            select: {
-                providerId: true
+            update: {
+                displayName: provider.displayName,
+                description: provider.description,
+                documentationUrl: provider.documentationUrl,
             }
-        }),
-        await prisma.providerCatalog.upsert({
-            where: { providerId: "google" },
-            update: {},
-            create: {
-                providerId: "google",
-                displayName: "Google",
-                description: "Google API models",
-                docsUrl: "https://ai.google.dev/gemini-api/docs/models",
-            },
-            select: {
-                providerId: true
-            }
-        }),
-        await prisma.providerCatalog.upsert({
-            where: { providerId: "anthropic" },
-            update: {},
-            create: {
-                providerId: "anthropic",
-                displayName: "Anthropic",
-                description: "Anthropic API models",
-                docsUrl: "https://docs.anthropic.com/en/docs/about-claude/models"
-            },
-            select: {
-                providerId: true
-            }
-        }),
-    ]);
+        })
 
-    console.log("Providers seeded:", providers);
+        await prisma.modelCatalog.createMany({
+            data: provider.models,
+            skipDuplicates: true
+        })
+    }
 
-    const result = await prisma.modelCatalog.createMany({
-        data: modelCatalogSeed,
-        skipDuplicates: true,
-    });
-
-    console.log(`Created ${result.count} model catalog entries`);
-
+    console.log(`Provider and models data is seeded for Google, Anthropic & openai`);
 }
 
 seed()

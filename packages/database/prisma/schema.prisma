@@ -11,20 +11,23 @@ generator client {
 }
 
 model User {
-  id            String               @id
+  id            String    @id
   name          String
   email         String
-  emailVerified Boolean              @default(false)
+  emailVerified Boolean   @default(false)
   image         String?
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
-  role          String               @default("user")
-  banned        Boolean?             @default(false)
+  role          String    @default("user")
+  banned        Boolean?  @default(false)
   banReason     String?
   banExpires    DateTime?
-  sessions      Session[]
-  accounts      Account[]
-  credentials   ProviderCredential[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions            Session[]
+  accounts            Account[]
+  deviceCodes         DeviceCode[]
+  providerCredentials ProviderCredential[]
+  auditLogs           AuditLog[]
 
   @@unique([email])
   @@map("user")
@@ -39,11 +42,13 @@ model Session {
   ipAddress      String?
   userAgent      String?
   userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   impersonatedBy String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([token])
   @@index([userId])
+  @@index([expiresAt])
   @@map("session")
 }
 
@@ -52,7 +57,6 @@ model Account {
   accountId             String
   providerId            String
   userId                String
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   accessToken           String?
   refreshToken          String?
   idToken               String?
@@ -62,6 +66,8 @@ model Account {
   password              String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("account")
@@ -76,74 +82,119 @@ model Verification {
   updatedAt  DateTime @updatedAt
 
   @@index([identifier])
+  @@index([expiresAt])
   @@map("verification")
 }
 
 model DeviceCode {
   id              String    @id
-  deviceCode      String    @unique
-  userCode        String    @unique
+  deviceCode      String
+  userCode        String
   userId          String?
-  expiresAt       DateTime
-  status          String
-  lastPolledAt    DateTime?
-  pollingInterval Int?
   clientId        String?
   scope           String?
+  status          String
+  expiresAt       DateTime
+  lastPolledAt    DateTime?
+  pollingInterval Int?
   deviceName      String?
 
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([deviceCode])
+  @@unique([userCode])
+  @@index([userId])
+  @@index([expiresAt])
   @@map("deviceCode")
 }
 
 model ProviderCatalog {
-  id          String   @id @default(uuid())
-  displayName String
-  providerId  String   @unique
-  description String?
-  docsUrl     String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  isDefault   Boolean  @default(false)
+  id               String   @id @default(uuid())
+  providerId       String   @unique
+  displayName      String
+  description      String?
+  documentationUrl String?
+  enabled          Boolean  @default(true)
+  isDefault        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  modelCatalogs       ModelCatalog[]
-  providerCredentials ProviderCredential[]
+  models      ModelCatalog[]
+  credentials ProviderCredential[]
+
+  @@index([enabled, displayName])
 }
 
 model ModelCatalog {
-  id              String          @id @default(uuid())
+  id              String   @id @default(uuid())
   providerId      String
-  provider        ProviderCatalog @relation(fields: [providerId], references: [providerId], onDelete: Cascade)
   modelId         String
   displayName     String
   description     String?
-  supportsTools   Boolean         @default(false)
+  supportsTools   Boolean  @default(false)
+  supportsImages  Boolean  @default(false)
   contextWindow   Int
   maxOutputTokens Int
-  inputCostPer1M  Int?
-  outputCostPer1M Int?
-  active          Boolean         @default(true)
-  isDefault       Boolean         @default(false)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  inputCostPer1M  Decimal? @db.Decimal(12, 6)
+  outputCostPer1M Decimal? @db.Decimal(12, 6)
+  enabled         Boolean  @default(true)
+  isDefault       Boolean  @default(false)
+  metadata        Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  provider ProviderCatalog @relation(fields: [providerId], references: [providerId], onDelete: Cascade)
 
   @@unique([providerId, modelId])
-  @@index([providerId, active])
+  @@index([providerId, enabled])
 }
 
 model ProviderCredential {
-  id         String          @id @default(uuid())
+  id         String    @id @default(uuid())
   userId     String
-  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   providerId String
-  provider   ProviderCatalog @relation(fields: [providerId], references: [providerId], onDelete: Cascade)
-  tag        String
+  label      String
   ciphertext String
   iv         String
   authTag    String
   keyVersion Int
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
-  @@unique([userId, providerId, tag])
-  @@index([userId])
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider ProviderCatalog @relation(fields: [providerId], references: [providerId], onDelete: Restrict)
+
+  @@unique([userId, providerId, label])
+  @@index([userId, providerId])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  actorUserId String?
+  action      String
+  targetType  String
+  targetId    String?
+  metadata    Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  actor User? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([actorUserId, createdAt])
+  @@index([targetType, targetId])
+  @@index([createdAt])
+}
+
+model ApplicationSetting {
+  key         String   @id
+  value       Json
+  description String?
+  isPublic    Boolean  @default(false)
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isPublic])
 }
