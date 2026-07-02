@@ -1,10 +1,11 @@
 declare global {
     namespace Express {
         interface Request {
-            session?: {
+            authSession?: {
                 id: string
-                accessToken: string
-            };
+                token: string
+                expiresAt: Date
+            }
 
             authUser?: {
                 id: string;
