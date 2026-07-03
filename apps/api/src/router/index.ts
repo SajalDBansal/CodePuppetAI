@@ -1,18 +1,22 @@
 import { Router } from "express";
-import cliRouter from "./cli.router.js";
-import accountRouter from "./account.router.js";
-import configRouter from "./config.router.js";
-import providerRouter from "./provider.router.js";
-import statusRouter from "./status.router.js";
-import credentialRouter from "./credential.router.js";
+import healthRouter from "./health.route.js";
+import agentSessionRouter from "./agent-session.route.js";
+import userRouter from "./user.route.js";
+import deviceLoginRouter from "./device-login.route.js";
+import credentialRouter from "./credential.route.js";
+import configurationRouter from "./configuration.route.js";
+import catalogRouter from "./catalog.route.js";
+import adminRouter from "./admin.route.js";
 
 const appRouter: Router = Router();
 
-appRouter.use("/", accountRouter);
-appRouter.use("/status", statusRouter);
-appRouter.use("/cli", cliRouter);
-appRouter.use("/config", configRouter);
-appRouter.use("/provider", providerRouter);
-appRouter.use("/credential", credentialRouter);
+appRouter.use("/health", healthRouter);
+appRouter.use("/user", userRouter);
+appRouter.use("/agent-session", agentSessionRouter);
+appRouter.use("/device-login", deviceLoginRouter);
+appRouter.use("/credentials", credentialRouter);
+appRouter.use("/configuration", configurationRouter);
+appRouter.use("/catalog", catalogRouter);
+appRouter.use("/admin", adminRouter);
 
 export default appRouter;
