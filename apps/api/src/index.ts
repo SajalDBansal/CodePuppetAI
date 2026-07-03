@@ -1,9 +1,8 @@
 import { createServer } from "./server.js";
-import { envConfig } from "./utils/config.js";
+import { environment } from "./utils/environment.js";
 
-const port = envConfig.PORT;
 const server = createServer();
 
-server.listen(port, () => {
-  console.log(`Backend Api server running on ${port}`);
+server.listen(environment.PORT, () => {
+  console.log(`API server listening on port ${environment.PORT}.`)
 });

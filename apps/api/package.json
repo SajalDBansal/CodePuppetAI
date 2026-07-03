@@ -21,6 +21,7 @@
   "dependencies": {
     "@workspace/database": "*",
     "@workspace/protocol": "*",
+    "@workspace/provider-registry": "*",
     "better-auth": "^1.6.25",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",

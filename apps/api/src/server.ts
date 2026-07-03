@@ -2,27 +2,29 @@ import { json, urlencoded } from "body-parser";
 import express, { type Express } from "express";
 import morgan from "morgan";
 import cors from "cors";
-import { errorHandler } from "./middleware/error.middleware.js";
+import { errorHandler } from "./middleware/error-handler.js";
 import { toNodeHandler } from "better-auth/node";
-import { auth } from "./utils/auth.js";
+import { auth } from "./auth/auth.js";
 import appRouter from "./router/index.js";
-import { envConfig } from "./utils/config.js";
+import { environment } from "./utils/environment.js";
+import { notFoundHandler } from "./middleware/not-found.js";
 
 export const createServer = (): Express => {
   const app = express();
 
   app
     .disable("x-powered-by")
-    .use(morgan("dev"))
+    .use(morgan(environment.NODE_ENV === "test" ? "tiny" : "dev"))
     .use(cors({
-      origin: envConfig.WEB_ORIGIN,
+      origin: environment.WEB_ORIGIN,
       credentials: true,
       methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     }))
     .all("/api/v1/auth/*", toNodeHandler(auth))
     .use(urlencoded({ extended: true }))
-    .use(json())
+    .use(json({ limit: "1mb" }))
     .use("/api/v1", appRouter)
+    .use(notFoundHandler)
     .use(errorHandler);
 
   return app;
