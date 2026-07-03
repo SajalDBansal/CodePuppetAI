@@ -1,63 +1,90 @@
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
+import { requireUserId } from "../utils/request.js";
 import { prisma } from "@workspace/database";
-import { CreateProviderCredentialSchema } from "@workspace/protocol";
-import { ValidationError } from "../utils/error.js";
-import { encryptApiKey } from "../service/vault.js";
-import { requireUserId } from "../utils/auth.js";
+import { recordAuditEvent } from "../service/audit.js";
+import { validate } from "../utils/validate.js";
+import { CreateCredentialSchema, CredentialIdParametersSchema } from "@workspace/protocol";
+import { EncryptCredential } from "../service/credential-vault.js";
+import { NotFoundError } from "../utils/api-error.js";
 
-const CREDENTIAL_METADATA_SELECT = {
+const publicCredentialFields = {
     id: true,
     providerId: true,
-    tag: true,
+    label: true,
+    lastUsedAt: true,
     createdAt: true,
     updatedAt: true,
-} as const;
+} as const
 
 export class CredentialController {
-
-    constructor() { }
-
-    /** Lists the current user's provider credentials, never the decrypted key. */
-    getAllCrdentialsMetadata = async (request: Request, response: Response) => {
-        const userId = requireUserId(request);
+    list = async (request: Request, response: Response): Promise<Response> => {
+        const userId = requireUserId(request)
         const credentials = await prisma.providerCredential.findMany({
             where: { userId },
-            select: CREDENTIAL_METADATA_SELECT,
-            orderBy: { createdAt: "desc" },
-        });
+            select: publicCredentialFields,
+            orderBy: { updatedAt: "desc" },
+        })
         return response.status(200).json({ credentials })
     }
 
-    deleteAllCrdential = async (request: Request, response: Response) => {
-        const userId = requireUserId(request);
-        const result = await prisma.providerCredential.deleteMany({ where: { userId } });
-        return response.status(200).json({ success: true, count: result.count })
-    }
-
-    /** Encrypts and stores an API key for a provider/tag, replacing any existing one for that pair. */
-    addCrdential = async (request: Request, response: Response) => {
-        const validate = CreateProviderCredentialSchema.safeParse(request.body);
-        if (!validate.success) {
-            throw new ValidationError(validate.error.issues.map(issue => issue.message).join(", "));
-        }
-        const userId = requireUserId(request);
-        const { providerId, tag, apiKey } = validate.data;
-        const secret = encryptApiKey(apiKey, { userId, providerId, tag });
+    save = async (request: Request, response: Response): Promise<Response> => {
+        const userId = requireUserId(request)
+        const input = validate(CreateCredentialSchema, request.body)
+        const encrypted = EncryptCredential(input.apiKey, {
+            userId,
+            providerId: input.providerId,
+            label: input.label,
+        })
 
         const credential = await prisma.providerCredential.upsert({
-            where: { userId_providerId_tag: { userId, providerId, tag } },
-            create: { userId, providerId, tag, ...secret },
-            update: { ...secret },
-            select: CREDENTIAL_METADATA_SELECT,
-        });
-        return response.status(200).json({ credential })
+            where: {
+                userId_providerId_label: {
+                    userId,
+                    providerId: input.providerId,
+                    label: input.label,
+                },
+            },
+            create: {
+                userId,
+                providerId: input.providerId,
+                label: input.label,
+                ...encrypted,
+            },
+            update: encrypted,
+            select: publicCredentialFields,
+        })
+        await recordAuditEvent(
+            request, "credential.saved", "ProviderCredential", credential.id,
+            { providerId: credential.providerId, label: credential.label, }
+        )
+        return response.status(201).json({ credential })
     }
 
-    deleteCrdentialById = async (request: Request, response: Response) => {
-        const userId = requireUserId(request);
-        const { id } = request.params;
-        await prisma.providerCredential.deleteMany({ where: { id, userId } });
-        return response.status(200).json({ success: true })
+    remove = async (request: Request, response: Response): Promise<Response> => {
+        const userId = requireUserId(request)
+        const { credentialId } = validate(CredentialIdParametersSchema, request.params)
+        const result = await prisma.providerCredential.deleteMany({
+            where: { id: credentialId, userId },
+        })
+
+        if (result.count === 0) {
+            throw new NotFoundError("The credential was not found.")
+        }
+
+        await recordAuditEvent(request, "credential.deleted", "ProviderCredential", credentialId)
+        return response.status(204).send()
     }
 
+    removeAll = async (request: Request, response: Response): Promise<Response> => {
+        const userId = requireUserId(request)
+        const result = await prisma.providerCredential.deleteMany({
+            where: { userId },
+        })
+
+        await recordAuditEvent(
+            request, "credential.deleted_all", "ProviderCredential", undefined,
+            { count: result.count, }
+        )
+        return response.status(200).json({ deletedCount: result.count })
+    }
 }
