@@ -1,7 +1,3 @@
-export * from "./utils/index.js";
-
-export * from "./types/index.js";
-
-export * from "./store/index.js";
-
-export * from "@workspace/protocol";
+export * from "./api-client.js";
+export * from "./error.js";
+export * from "./types.js";
