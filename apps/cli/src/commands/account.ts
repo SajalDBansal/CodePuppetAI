@@ -1,150 +1,157 @@
-import axios from "axios";
 import { Command } from "commander";
-import { harnessConfig } from "../utils/config.js";
+import { apiUrl, ENV_CONFIG, harness, logger } from "../utils/context.js";
+import inquirer from "inquirer";
 import { hostname, platform } from "node:os";
-import open from "open";
-import { authStore, vaultStore } from "../utils/harness-config.js";
-import { logger } from "../utils/logger.js";
-import { preHookCheck } from "./hook.js";
+import open from "open"
+import { HarnessApiError } from "@workspace/harness";
+import { CliUsageError } from "../utils/error.js";
+
 
 export function accountCommand(program: Command) {
-
-    program
-        .command("status")
-        .description("show the current CLI session status")
-        .action(async () => {
-            const status = await preHookCheck();
-            if (status.authenticated) {
-                const auth = await authStore.get();
-                if (auth) {
-                    logger.info(`Logged in as ${auth.user?.email}\n`)
-                } else {
-                    logger.info("Logged in, but could not retrieve user information. Please login again\n")
-                }
-            } else {
-                logger.info("Not logged in.\n")
-            }
-        })
-
     program
         .command("login")
-        .description("authorize this CLI through the NewCoding website")
-        .option("--no-open", "do not open the verification URL")
+        .description("Sign in through the browser using device authorization")
+        .option("--no-open", "do not open the verification page in a browser")
         .action(async (options: { open: boolean }) => {
-            const status = await preHookCheck();
-            if (status.authenticated) {
-                logger.info("Already logged in. Run `agent logout` to log out.\n")
-                return;
-            }
-
-            const controller = new AbortController();
-            const stop = (): void => controller.abort(new Error("Login interrupted"));
-            process.once("SIGINT", stop)
-            try {
-                const deviceName = `${hostname()}:${platform()}`;
-                const start = await startDeviceLogin(deviceName);
-
-                console.log(`First, confirm this code in your browser: ${start.userCode}`)
-                console.log(`Opening ${start.verificationUriComplete} ...`);
-                if (options.open) {
-                    await open(start.verificationUriComplete);
-                }
-
-                const deadline = Date.now() + start.expiresIn * 1000;
-                let interval = start.interval;
-
-                while (Date.now() < deadline) {
-                    await new Promise((resolve) => setTimeout(resolve, interval * 1000));
-                    const result = await pollDeviceResult(start.deviceCode);
-                    if ("status" in result && result.status === "approved") {
-                        await authStore.save(result);
-                        console.log(`Logged in as ${result.user.email}`)
-                        return;
+            const existing = await harness.auth.get();
+            if (existing && (await harness.auth.isAuthenticated())) {
+                const answer = await inquirer.prompt<{ replace: boolean }>([
+                    {
+                        type: "confirm",
+                        name: "replace",
+                        message: `Replace the session for ${existing.user.email}?`,
+                        default: false
                     }
+                ])
+                if (!answer.replace) {
+                    logger.info("Login was left unchanged.");
+                    return;
                 }
-                logger.info("Login timed out. Run `agent login` again.\n")
-                process.exitCode = 1
-
-
-            } catch (error) {
-                logger.error(`${(error as Error).message}\n`)
-                process.exitCode = 1
-            } finally {
-                process.off("SIGINT", stop)
             }
+
+            logger.step("Starting device login...");
+            const login = await harness.api.startDeviceLogin(`${ENV_CONFIG.AGENT_NAME}:${hostname()}:${platform()}`);
+            logger.heading("Authorize this device");
+            logger.keyValue("Code", login.userCode);
+            logger.keyValue("URL", login.verificationUri);
+
+            if (options.open) {
+                try {
+                    await open(login.verificationUriComplete)
+                    logger.info("The verification page was opened in your browser");
+                } catch {
+                    logger.warn("The browser could not be opened. Use the URL above.");
+                }
+            }
+
+            logger.step("Waiting for approval...");
+            const token = await waitForDeviceApproval(login);
+            const user = await harness.api.getCurrentUser(token.accessToken);
+            await harness.auth.set({
+                schemaVersion: 1,
+                apiUrl: apiUrl,
+                accessToken: token.accessToken,
+                tokenType: token.tokenType,
+                expiresAt: new Date(Date.now() + token.expiresIn * 1_000).toISOString(),
+                user
+            })
+
+            logger.success(`Signed in as ${user.name} (${user.email}).`)
+            logger.info("Run 'codex-agent init' to configure this workspace.")
         })
 
     program
         .command("logout")
-        .description("revoke the CLI session while preserving config and provider profiles")
-        .option("--local-only", "skip remote session revocation")
-        .action(async (options: { localOnly: boolean }) => {
-            const status = await preHookCheck();
-            const auth = await authStore.get();
-            if (!status.authenticated || !auth) {
-                logger.info("Not logged in.\n")
-                return;
-            };
-            const accessToken = await vaultStore.getToken(auth.user.id);
-
-            if (!options.localOnly && accessToken) {
-                try {
-                    await axios.post(`${harnessConfig.BACKEND_URL}/api/v1/cli/logout`, {}, {
-                        headers: {
-                            Authorization: `Bearer ${accessToken}`,
-                        },
-                    });
-                } catch (error) {
-                    logger.error(`Failed to revoke remote session: ${(error as Error).message}\n`)
-                    process.exitCode = 1
+        .description("Sign out and remove the local device session")
+        .option("-f, --force", "skip the confirmation prompt")
+        .action(async (options: { force?: boolean }) => {
+            const auth = await harness.auth.get()
+            if (!auth) {
+                logger.info("No local login was found.")
+                return
+            }
+            if (!options.force) {
+                const answer = await inquirer.prompt<{ confirmed: boolean }>([
+                    {
+                        type: "confirm",
+                        name: "confirmed",
+                        message: `Sign out ${auth.user.email}?`,
+                        default: true,
+                    },
+                ])
+                if (!answer.confirmed) {
+                    logger.info("Logout was cancelled.")
+                    return
                 }
             }
 
-            await authStore.clear();
-            logger.info("Logged out.\n")
+            try {
+                if (await harness.auth.isAuthenticated()) {
+                    await harness.api.logout();
+                }
+            } catch (error) {
+                logger.debug(`Remote logout failed: ${String(error)}`)
+                logger.warn("The backend session could not be revoked; clearing local login.")
+            }
+            await harness.auth.clear()
+            logger.success("Signed out and removed the local device session.")
         })
 
 }
 
-type DeviceStartResponse = {
-    deviceCode: string;
-    userCode: string;
-    verificationUri: string;
-    verificationUriComplete: string;
-    expiresIn: number;
-    interval: number;
-}
 
-type PoolDeviceResponse = {
-    status: string;
-    accessToken: string;
-    tokenType: string;
-    expiresIn: number;
-    expiresAt: string;
-    scope: string;
-    user: {
-        name: string;
-        id: string;
-        email: string;
-    };
-}
+async function waitForDeviceApproval(login: {
+    deviceCode: string,
+    expiresIn: number,
+    interval: number
+}) {
+    const expiresAt = Date.now() + login.expiresIn * 1_000;
+    let intervalMs = Math.max(1, login.interval) * 1_000;
 
-async function startDeviceLogin(deviceName: string): Promise<DeviceStartResponse> {
-    const response = await axios.post(`${harnessConfig.BACKEND_URL}/api/v1/cli/login/start`, { deviceName });
-    if (response.status < 200 || response.status >= 300) {
-        throw new Error(`Could not reach the backend at ${harnessConfig.BACKEND_URL} (status ${response.status})`);
-    }
-    return response.data as DeviceStartResponse;
-}
+    while (Date.now() < expiresAt) {
+        await delay(intervalMs);
+        try {
+            return await harness.api.exchangeDeviceToken(login.deviceCode);
+        } catch (error) {
+            if (!(error instanceof HarnessApiError)) throw error;
+            const code = error.code?.toLowerCase()
+            const message = error.message.toLowerCase()
+            if (
+                code === "authorization_pending" ||
+                message.includes("authorization pending") ||
+                message.includes("authorization_pending")
+            ) {
+                continue
+            }
+            if (
+                code === "slow_down" ||
+                message.includes("slow down") ||
+                message.includes("slow_down")
+            ) {
+                intervalMs += 5_000
+                continue
+            }
+            if (
+                code === "access_denied" ||
+                message.includes("access_denied") ||
+                message.includes("denied")
+            ) {
+                throw new CliUsageError("Device login was denied.")
+            }
+            if (
+                code === "expired_token" ||
+                message.includes("expired_token") ||
+                message.includes("expired")
+            ) {
+                break
+            }
+            throw error
 
-async function pollDeviceResult(deviceCode: string): Promise<PoolDeviceResponse> {
-    try {
-        const response = await axios.post(`${harnessConfig.BACKEND_URL}/api/v1/cli/login/token`, { deviceCode });
-        if (response.status < 200 || response.status >= 300) {
-            throw new Error(`Could not reach the backend at ${harnessConfig.BACKEND_URL} (status ${response.status})`);
         }
-        return response.data as PoolDeviceResponse;
-    } catch (error) {
-        return { status: "pending" } as PoolDeviceResponse;
     }
+    throw new CliUsageError("The device login request expired. Run login again.")
+}
+
+function delay(milliseconds: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, milliseconds))
 }

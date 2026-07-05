@@ -1,211 +1,192 @@
 import { Command } from "commander";
-import { authStore, catalogStore, configStore, vaultStore } from "../utils/harness-config.js";
-import { logger } from "../utils/logger.js";
+import { harness, logger } from "../utils/context.js";
+import { formatDate, shortId } from "../utils/format.js";
 import inquirer from "inquirer";
+import { CliUsageError } from "../utils/error.js";
+import { CredentialMetadata } from "@workspace/harness";
+
 
 export function authCommand(program: Command) {
-    const command = program
+    const auth = program
         .command("auth")
-        .description("Manage AI providers authentication keys")
-        .action(async () => {
-            const credentials = await vaultStore.getAllCredentialsMetadata();
-            logger.info(`You have ${credentials.length} registered API key(s). Use 'agent auth show' to view them.`);
-        })
+        .description("Manage provider API credentials stored by the backend")
+        .action(async () => await showCredentials())
 
-    command
-        .command("show")
-        .description("show the current registered api keys")
-        .action(async () => {
-            const credentials = await vaultStore.getAllCredentialsMetadata();
-            logger.info(`You have ${credentials.length} registered API key(s):`);
-            const tableData = credentials.map((credential) => ({
-                Provider: credential.providerId,
-                Tag: credential.tag,
-                updatedAt: new Date(credential.updatedAt).toLocaleString(),
-            }))
-            console.table(tableData);
-        })
+    auth
+        .command("list")
+        .description("List saved credential metadata")
+        .action(async () => await showCredentials())
 
-    command
+    auth
         .command("add")
-        .description("register an api key for the given provider")
+        .description("Add or replace a provider API credential")
         .action(async () => {
-            await setProviderCredential();
-        });
+            const catalog = (await harness.catalog.get())?.providers ?? (await harness.api.listProviders());
+            const providerAnswer = await inquirer.prompt<{ providerId: string }>([
+                catalog.length > 0
+                    ? {
+                        type: "select",
+                        name: "providerId",
+                        message: "Provider",
+                        choices: catalog.map((provider) => ({
+                            name: provider.displayName,
+                            value: provider.providerId,
+                        })),
+                    }
+                    : {
+                        type: "input",
+                        name: "providerId",
+                        message: "Provider id",
+                        validate: required("Enter a provider id."),
+                    },
+            ]);
+            const answers = await inquirer.prompt<{ label: string; apiKey: string }>([
+                {
+                    type: "input",
+                    name: "label",
+                    message: "Credential label",
+                    default: "default",
+                    validate: required("Enter a credential label."),
+                },
+                {
+                    type: "password",
+                    name: "apiKey",
+                    message: "API key",
+                    mask: "*",
+                    validate: required("Enter an API key."),
+                },
+            ])
 
-    command
-        .command("set")
-        .description("select which registered api key to use when the provider call executes")
+            const credential = await harness.api.saveCredential({
+                providerId: providerAnswer.providerId,
+                label: answers.label.trim(),
+                apiKey: answers.apiKey.trim(),
+            })
+            logger.success(`Saved '${credential.label}' for ${credential.providerId}. The key remains on the backend.`);
+        })
+
+    auth
+        .command("use")
+        .description("Select the credential used for a provider")
         .action(async () => {
-            await selectProviderCredential();
-        });
-
-    command
-        .command("check")
-        .description("check the currently selected api key for a provider")
-        .option("-a, --all", "show the selected api key for every provider in a table")
-        .action(async (options: { all?: boolean }) => {
-            await checkProviderCredential(options.all);
-        });
-
-    command
-        .command("remove")
-        .description("delete the registered api key for the given provider")
-        .option("-a, --all", "replace an existing or corrupt local config")
-        .action(async (options: { all?: boolean }) => {
-            await removeProviderCredential(options.all);
-        });
-}
-
-async function setProviderCredential(): Promise<void> {
-    const config = await configStore.get();
-    if (!config) {
-        logger.error("No configuration found. Run 'agent init' first.");
-        return;
-    }
-
-    const providers = await catalogStore.getProvidersList();
-    if (providers.length === 0) {
-        logger.error("No providers found in the catalog. Run 'agent init' first.");
-        return;
-    }
-
-    const { providerId, tag, apiKey } = await inquirer.prompt([
-        {
-            type: "select",
-            name: "providerId",
-            message: "Select a provider:",
-            choices: providers.map((provider) => ({ name: provider.name, value: provider.id })),
-            default: config.provider,
-        },
-        {
-            type: "input",
-            name: "tag",
-            message: "Give a tag to your api key(this will help you identify it):",
-            validate: (input) => {
-                if (input.trim() === "") {
-                    return "Tag should not be empty"
-                }
-                return true;
+            const config = await harness.config.get()
+            if (!config) {
+                throw new CliUsageError("Run 'code-puppet init' before selecting a credential.")
             }
-        },
-        {
-            type: "password",
-            name: "apiKey",
-            message: "Write your apikey: ",
-            mask: "*"
-        },
-    ]);
+            const credentials = await harness.api.listCredentials()
+            if (credentials.length === 0) {
+                throw new CliUsageError("No credentials are saved. Run 'codex-agent auth add'.")
+            }
+            const answer = await inquirer.prompt<{ credentialId: string }>([
+                {
+                    type: "select",
+                    name: "credentialId",
+                    message: "Credential",
+                    choices: credentials.map((credential) => ({
+                        name: `${credential.providerId} / ${credential.label}`,
+                        value: credential.id,
+                    })),
+                },
+            ])
+            const credential = requireCredential(credentials, answer.credentialId)
+            await harness.config.selectCredential(credential)
+            logger.success(`Selected '${credential.label}' for ${credential.providerId}.`)
+        })
 
-    const keyDetails = await vaultStore.setCredential(providerId, tag, apiKey);
-    logger.success(`API key for provider '${providerId}' with tag '${tag}' has been registered successfully.`);
+    auth
+        .command("remove")
+        .description("Remove one or all saved credentials")
+        .option("--all", "remove every credential")
+        .action(async (options: { all?: boolean }) => {
+            const credentials = await harness.api.listCredentials()
+            if (credentials.length === 0) {
+                logger.info("No credentials are saved.")
+                return
+            }
+            if (options.all) {
+                const answer = await inquirer.prompt<{ confirmed: boolean }>([
+                    {
+                        type: "confirm",
+                        name: "confirmed",
+                        message: `Remove all ${credentials.length} credentials?`,
+                        default: false,
+                    },
+                ])
+                if (!answer.confirmed) return
+                const count = await harness.api.removeAllCredentials()
+                const config = await harness.config.get()
+                if (config) {
+                    await harness.config.set({
+                        ...config,
+                        selectedCredentials: {},
+                        updatedAt: new Date().toISOString(),
+                    })
+                }
+                logger.success(`Removed ${count} credentials.`)
+                return
+            }
+
+
+            const answer = await inquirer.prompt<{ credentialId: string, confirmed: boolean }>([
+                {
+                    type: "select",
+                    name: "credentialId",
+                    message: "Credential",
+                    choices: credentials.map((credential) => ({
+                        name: `${credential.providerId} / ${credential.label}`,
+                        value: credential.id,
+                    })),
+                },
+                {
+                    type: "confirm",
+                    name: "confirmed",
+                    message: "Remove this credential?",
+                    default: false,
+                },
+            ])
+            if (!answer.confirmed) return
+            const credential = requireCredential(credentials, answer.credentialId)
+            await harness.api.removeCredential(credential.id)
+            const config = await harness.config.get()
+
+            if (config?.selectedCredentials[credential.providerId]?.id === credential.id) {
+                await harness.config.clearCredential(credential.providerId)
+            }
+            logger.success(`Removed '${credential.label}'.`);
+        })
 }
 
-async function removeProviderCredential(all?: boolean): Promise<void> {
-    if (all) {
-        const count = await vaultStore.deleteAllCredentials();
-        await authStore.clearAllCredentialMetadata();
-        logger.success(`All ${count} API keys have been deleted successfully.`);
-        return;
-    }
-
-    const credentials = await vaultStore.getAllCredentialsMetadata();
+async function showCredentials(): Promise<void> {
+    const [credentials, config] = await Promise.all([
+        harness.api.listCredentials(),
+        harness.config.get()
+    ]);
     if (credentials.length === 0) {
-        logger.info("No API keys found to delete.");
+        logger.info("No credentials are saved. Run 'code-puppet auth add'.");
         return;
     }
 
-    const { credentialId } = await inquirer.prompt([
-        {
-            type: "select",
-            name: "credentialId",
-            message: "Select an API key to delete:",
-            choices: credentials.map((credential) => ({
-                name: `Provider: ${credential.providerId}, Tag: ${credential.tag}`,
-                value: credential.id,
-            })),
-        },
-    ]);
-
-    await vaultStore.deleteCredential(credentialId);
-    const deletedCredential = credentials.find((credential) => credential.id === credentialId);
-    if (!deletedCredential) {
-        logger.error("Failed to find the deleted credential details.");
-        return;
-    }
-    const { providerId, tag } = deletedCredential;
-
-    const selected = await authStore.getCredentialMetadata(providerId);
-    if (selected?.id === deletedCredential.id) {
-        await authStore.clearCredentialMetadata(providerId);
-    }
-
-    logger.success(`API key with provider '${providerId}' with tag '${tag}' has been deleted successfully.`);
+    logger.heading("Provider credentials");
+    logger.table(
+        ["Id", "Provider", "Label", "Selected", "Last Used", "Updated"],
+        credentials.map((cred) => [
+            shortId(cred.id),
+            cred.providerId,
+            cred.label,
+            logger.selected(config?.selectedCredentials[cred.providerId]?.id === cred.id),
+            formatDate(cred.lastUsedAt),
+            formatDate(cred.updatedAt),
+        ])
+    )
 }
 
-async function selectProviderCredential(): Promise<void> {
-    const credentials = await vaultStore.getAllCredentialsMetadata();
-    if (credentials.length === 0) {
-        logger.info("No API keys found to select. Use 'agent auth add' to register one first.");
-        return;
-    }
-
-    const { credentialId } = await inquirer.prompt([
-        {
-            type: "select",
-            name: "credentialId",
-            message: "Select an API key to use:",
-            choices: credentials.map((credential) => ({
-                name: `Provider: ${credential.providerId}, Tag: ${credential.tag}`,
-                value: credential.id,
-            })),
-        },
-    ]);
-
-    const selectedCredential = credentials.find((credential) => credential.id === credentialId);
-    if (!selectedCredential) {
-        logger.error("Failed to find the credential details.");
-        return;
-    }
-
-    const { providerId, tag } = selectedCredential;
-    await authStore.setCredentialMetaData(providerId, selectedCredential);
-    logger.success(`API key with provider '${providerId}' with tag '${tag}' has been selected for future provider calls.`);
+function required(message: string) {
+    return (value: string) => value.trim().length > 0 || message
 }
 
-async function checkProviderCredential(all?: boolean): Promise<void> {
-    const credentialMetadata = await authStore.getAllCredentialMetadata();
-    const providerIds = Object.keys(credentialMetadata);
-
-    if (providerIds.length === 0) {
-        logger.info("No provider has a selected API key yet. Use 'agent auth set' to select one.");
-        return;
-    }
-
-    if (all) {
-        const tableData = providerIds.map((providerId) => {
-            const credential = credentialMetadata[providerId]!;
-            return {
-                Provider: providerId,
-                Tag: credential.tag,
-                updatedAt: new Date(credential.updatedAt).toLocaleString(),
-            };
-        });
-        console.table(tableData);
-        return;
-    }
-
-    const { providerId } = await inquirer.prompt([
-        {
-            type: "select",
-            name: "providerId",
-            message: "Select a provider to check:",
-            choices: providerIds.map((providerId) => ({ name: providerId, value: providerId })),
-        },
-    ]);
-
-    const credential = credentialMetadata[providerId]!;
-    logger.success(
-        `Provider '${providerId}' is using API key with tag '${credential.tag}' (last updated ${new Date(credential.updatedAt).toLocaleString()}).`
-    );
+function requireCredential(credentials: CredentialMetadata[], credentialId: string): CredentialMetadata {
+    const credential = credentials.find((entry) => entry.id === credentialId)
+    if (!credential)
+        throw new CliUsageError("The selected credential is unavailable.")
+    return credential
 }
