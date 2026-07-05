@@ -19,8 +19,7 @@ export class CatalogStore {
             const content = await readFile(this.filePath, "utf8")
             const result = CatalogSnapshotSchema.safeParse(JSON.parse(content))
             return result.success ? result.data : null
-        } catch (error) {
-            console.log(error);
+        } catch {
             return null
         }
     }
