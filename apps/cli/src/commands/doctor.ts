@@ -1,64 +1,109 @@
 import { Command } from "commander";
-import { preHookCheck } from "./index.js";
-import { catalogStore, configStore, path } from "../utils/harness-config.js";
-import { logger } from "../utils/logger.js";
-
-export function doctorCommand(program: Command) {
-
-    program
-        .command("doctor")
-        .description("Check that the backend is reachable and you're logged in")
-        .action(async () => {
-            // Check if the backend is reachable
-            const isBackendReachable = await checkBackendReachable();
-
-            // check if all the required files and directories are present
-            const isAllRequiredDirsPresent = await path.ensureAllDirExists();
-            const isAllRequiredFilesPresent = await path.checkAllPaths();
-
-            // Check if the user logged in or not
-            // Check if the config file is valid
-            let { authenticated, configInitialized } = await preHookCheck();
-
-            const config = await configStore.get();
-            if (!config) {
-                configInitialized = false;
-            }
-
-            // show provider
-            const provider = config?.provider ?? "not set";
-            // show model
-            const model = config?.model ?? "not set";
-            // show working directories
-            const workRootAccess = await configStore.checkWorkDirAccess();
-
-            // Check catalog ok
-            const isCatalogFilePresent = await catalogStore.check();
-
-            // check tools count
-            const toolsCount = 0;
+import { apiUrl, harness, logger } from "../utils/context.js";
+import { access, constants } from "node:fs/promises"
 
 
-            logger.info("Doctor check results:");
-            logger.info(`Backend reachable: ${isBackendReachable}`);
-            logger.info(`Authenticated: ${authenticated}`);
-            logger.info(`Config initialized: ${configInitialized}`);
-            logger.info(`Provider: ${provider}`);
-            logger.info(`Model: ${model}`);
-            logger.info(`Catalog file present: ${isCatalogFilePresent}`);
-            logger.info(`All required directories present: ${isAllRequiredDirsPresent}`);
-            logger.info(`All required files present: ${Object.values(isAllRequiredFilesPresent).every(Boolean)}`);
-
-            if (workRootAccess) {
-                for (const access of workRootAccess) {
-                    logger.info(`Workspace root: ${access.root}, Readable: ${access.readable}`);
-                }
-            } else {
-                logger.info("No workspace roots configured.");
-            }
-        })
+interface DoctorCheck {
+    check: string
+    status: "ok" | "warning" | "failed"
+    detail: string
 }
 
-async function checkBackendReachable(): Promise<boolean> {
-    return Promise.resolve(true);
+export function doctorCommand(program: Command) {
+    program
+        .command("doctor")
+        .description("Check the CLI, backend, login, configuration, and workspace")
+        .action(async () => {
+            logger.step("Running diagnostics…")
+            const [paths, live, ready, auth, config, catalog] = await Promise.all([
+                harness.paths.status(),
+                harness.api.checkLive(),
+                harness.api.checkReady(),
+                harness.auth.get(),
+                harness.config.get(),
+                harness.catalog.get(),
+            ])
+
+            const checks: DoctorCheck[] = [
+                {
+                    check: "Backend process",
+                    status: live ? "ok" : "failed",
+                    detail: live ? apiUrl : `Cannot reach ${apiUrl}`,
+                },
+                {
+                    check: "Backend database",
+                    status: ready ? "ok" : "failed",
+                    detail: ready ? "Available" : "Unavailable",
+                },
+                {
+                    check: "Data directory",
+                    status: paths.agentDirectory ? "ok" : "warning",
+                    detail: harness.paths.agentDir,
+                },
+                {
+                    check: "Login",
+                    status:
+                        auth && (await harness.auth.isAuthenticated()) ? "ok" : "warning",
+                    detail: auth ? auth.user.email : "Run codex-agent login",
+                },
+                {
+                    check: "Configuration",
+                    status: config ? "ok" : "warning",
+                    detail: config ? `${config.providerId} / ${config.modelId}` : "Run codex-agent init",
+                },
+                {
+                    check: "Catalog cache",
+                    status: catalog ? "ok" : "warning",
+                    detail: catalog ? `${catalog.providers.length} providers, fetched ${catalog.fetchedAt}` : "Created during init",
+                },
+                // {
+                //     check: "Tool registry",
+                //     status: "ok",
+                //     detail: `${createToolRegistry().list().length} tools registered`,
+                // },
+            ]
+            if (config) {
+                checks.push(...(await workspaceChecks(config.workspaceRoots)))
+            }
+
+            logger.heading("Doctor report")
+            logger.table(
+                ["Check", "Status", "Detail"],
+                checks.map((check) => [
+                    check.check,
+                    logger.status(check.status),
+                    check.detail,
+                ])
+            )
+
+            const failed = checks.filter((check) => check.status === "failed").length
+            const warnings = checks.filter((check) => check.status === "warning").length
+            if (failed > 0) {
+                logger.error(`${failed} checks failed; ${warnings} warnings remain.`)
+                process.exitCode = 1
+            } else if (warnings > 0) {
+                logger.warn(`Diagnostics passed with ${warnings} warnings.`)
+            } else {
+                logger.success("All diagnostics passed.")
+            }
+
+        })
+
+}
+
+async function workspaceChecks(roots: string[]): Promise<DoctorCheck[]> {
+    return Promise.all(
+        roots.map(async (root) => {
+            try {
+                await access(root, constants.R_OK | constants.W_OK)
+                return { check: "Workspace", status: "ok", detail: root } as DoctorCheck
+            } catch {
+                return {
+                    check: "Workspace",
+                    status: "failed",
+                    detail: `${root} is not readable and writable`,
+                } as DoctorCheck
+            }
+        })
+    )
 }
