@@ -1,29 +1,20 @@
-export class HarnessError extends Error {
-    constructor(
-        message: string,
-        public readonly code = "HARNESS_ERROR",
-        public readonly exitCode = 1,
-    ) {
-        super(message);
-        this.name = "HarnessError";
+export class CliUsageError extends Error {
+    constructor(message: string) {
+        super(message)
+        this.name = "CliUsageError"
+    }
+}
+
+export class WorkspaceAccessRequiredError extends Error {
+    constructor(workspaceRoot: string) {
+        super(
+            `Current directory "${workspaceRoot}" is not registered for agent access.`
+        )
+        this.name = "WorkspaceAccessRequiredError"
     }
 }
 
 export function errorMessage(error: unknown): string {
     if (error instanceof Error) return error.message;
     return String(error);
-}
-
-export class AuthenticationError extends Error {
-    constructor(message = "Login is required. Run 'deepmind login'.") {
-        super(message)
-        this.name = "AUTHENTICATION_ERROR"
-    }
-}
-
-export class InitializationError extends Error {
-    constructor() {
-        super("Configuration is not initialized. Run 'deepmind init'.")
-        this.name = "INITIALIZATION_ERROR"
-    }
 }
