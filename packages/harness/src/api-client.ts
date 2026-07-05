@@ -49,7 +49,7 @@ export class APIClient {
         await this.request("/users/logout", { method: "POST" })
     }
 
-    async getBootstrap(): Promise<BootstrapConfiguration> {
+    async getBootstrapConfig(): Promise<BootstrapConfiguration> {
         return this.request("/configuration/bootstrap");
     }
 
@@ -75,7 +75,7 @@ export class APIClient {
         return response.credentials.map((cred) => CredentialMetadataSchema.parse(cred));
     }
 
-    async saveCredentials(input: {
+    async saveCredential(input: {
         providerId: string,
         label: string,
         apiKey: string
@@ -84,7 +84,7 @@ export class APIClient {
         return CredentialMetadataSchema.parse(response.credential);
     }
 
-    async removeCredentials(credentialId: string): Promise<void> {
+    async removeCredential(credentialId: string): Promise<void> {
         await this.request(`/credentials/${credentialId}`, { method: "DELETE" })
     }
 
