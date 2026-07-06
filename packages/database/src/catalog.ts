@@ -19,7 +19,7 @@ export type SeedModel = {
     maxOutputTokens: number;
     inputCostPer1M: number;
     outputCostPer1M: number;
-    active: boolean;
+    enabled: boolean;
     isDefault: boolean;
 };
 
@@ -33,7 +33,7 @@ export const openaiModelCatalogSeed: SeedModel[] = [{
     maxOutputTokens: 128_000,
     inputCostPer1M: 30,
     outputCostPer1M: 180,
-    active: true,
+    enabled: true,
     isDefault: true,
 },
 
@@ -47,7 +47,7 @@ export const openaiModelCatalogSeed: SeedModel[] = [{
     maxOutputTokens: 128_000,
     inputCostPer1M: 5,
     outputCostPer1M: 30,
-    active: true,
+    enabled: true,
     isDefault: false,
 },
 
@@ -61,7 +61,7 @@ export const openaiModelCatalogSeed: SeedModel[] = [{
     maxOutputTokens: 128_000,
     inputCostPer1M: 2.5,
     outputCostPer1M: 15,
-    active: true,
+    enabled: true,
     isDefault: false,
 },
 
@@ -75,7 +75,7 @@ export const openaiModelCatalogSeed: SeedModel[] = [{
     maxOutputTokens: 128_000,
     inputCostPer1M: 1.75,
     outputCostPer1M: 14,
-    active: true,
+    enabled: true,
     isDefault: false,
 },
 ] as const
@@ -92,7 +92,7 @@ export const googleModelCatalogSeed: SeedModel[] = [
         maxOutputTokens: 65_536,
         inputCostPer1M: 2,
         outputCostPer1M: 12,
-        active: true,
+        enabled: true,
         isDefault: true,
     },
 
@@ -106,7 +106,7 @@ export const googleModelCatalogSeed: SeedModel[] = [
         maxOutputTokens: 65_536,
         inputCostPer1M: 2,
         outputCostPer1M: 12,
-        active: true,
+        enabled: true,
         isDefault: false,
     },
 
@@ -120,7 +120,7 @@ export const googleModelCatalogSeed: SeedModel[] = [
         maxOutputTokens: 65_536,
         inputCostPer1M: 1.5,
         outputCostPer1M: 9,
-        active: true,
+        enabled: true,
         isDefault: false,
     },
 
@@ -134,7 +134,7 @@ export const googleModelCatalogSeed: SeedModel[] = [
         maxOutputTokens: 65_536,
         inputCostPer1M: 1.25,
         outputCostPer1M: 10,
-        active: true,
+        enabled: true,
         isDefault: false,
     }
 
@@ -152,7 +152,7 @@ export const anthropicModelCatalogSeed: SeedModel[] = [
         maxOutputTokens: 128_000,
         inputCostPer1M: 5,
         outputCostPer1M: 25,
-        active: true,
+        enabled: true,
         isDefault: true,
     },
 
@@ -166,7 +166,7 @@ export const anthropicModelCatalogSeed: SeedModel[] = [
         maxOutputTokens: 128_000,
         inputCostPer1M: 5,
         outputCostPer1M: 25,
-        active: true,
+        enabled: true,
         isDefault: false,
     },
 
@@ -180,7 +180,7 @@ export const anthropicModelCatalogSeed: SeedModel[] = [
         maxOutputTokens: 64_000,
         inputCostPer1M: 3,
         outputCostPer1M: 15,
-        active: true,
+        enabled: true,
         isDefault: false,
     },
 
@@ -194,7 +194,7 @@ export const anthropicModelCatalogSeed: SeedModel[] = [
         maxOutputTokens: 64_000,
         inputCostPer1M: 1,
         outputCostPer1M: 5,
-        active: true,
+        enabled: true,
         isDefault: false,
     },
 
