@@ -5,12 +5,12 @@ import path from "node:path";
 import inquirer from "inquirer";
 import { WorkspaceAccessRequiredError } from "./utils/error.js";
 
-const AUTH_EXEMPT_COMMANDS = new Set(["login", "logout", "status", "doctor"]);
-const CONFIG_EXEMPT_COMMANDS = new Set(["login", "logout", "status", "doctor", "init"]);
+const AUTH_EXEMPT_COMMANDS = new Set(["login", "logout", "doctor", "list"]);
+const CONFIG_EXEMPT_COMMANDS = new Set(["login", "logout", "doctor", "init", "list"]);
 
 export function installPrehooks(program: Command): void {
     program.hook("preAction", async (_root, command) => {
-        const commandName = command.name();
+        const commandName = commandPath(command);
 
         if (!AUTH_EXEMPT_COMMANDS.has(commandName)) {
             const authenticated = await harness.auth.isAuthenticated();
@@ -44,6 +44,13 @@ export function installPrehooks(program: Command): void {
         }
     })
 }
+
+function commandPath(command: Command): string {
+    return command.parent && command.parent.parent
+        ? `${commandPath(command.parent)} ${command.name()}`
+        : command.name()
+}
+
 
 function isWithin(target: string, root: string): boolean {
     const relative = path.relative(root, target)
