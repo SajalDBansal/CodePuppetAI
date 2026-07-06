@@ -16,7 +16,7 @@ export class APIClient {
     }
 
     async startDeviceLogin(deviceName: string): Promise<DeviceLoginStart> {
-        return this.request("/api/v1/device-login/start", {
+        return this.request("/device-login/start", {
             method: "POST",
             body: { deviceName },
             authenticated: false,
@@ -41,12 +41,12 @@ export class APIClient {
     }
 
     async getCurrentUser(accessToken?: string): Promise<HarnessUser> {
-        const response = await this.request<{ user: unknown }>("/api/v1/users/me", { accessToken, })
+        const response = await this.request<{ user: unknown }>("/user/me", { accessToken, })
         return HarnessUserSchema.parse(response.user)
     }
 
     async logout(): Promise<void> {
-        await this.request("/users/logout", { method: "POST" })
+        await this.request("/user/logout", { method: "POST" })
     }
 
     async getBootstrapConfig(): Promise<BootstrapConfiguration> {
@@ -98,7 +98,7 @@ export class APIClient {
     async checkLive(): Promise<boolean> {
         try {
             const response = await this.request<{ status: string }>("/health/live", { authenticated: false })
-            return response.status === "ok"
+            return response.status === "OK"
         } catch {
             return false
         }
@@ -140,7 +140,7 @@ export class APIClient {
             })
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            throw new HarnessApiError(`Cannot reach the backned: ${message}`, 0);
+            throw new HarnessApiError(`Cannot reach the backend: ${message}`, 0);
         }
 
         if (!response.ok) {
