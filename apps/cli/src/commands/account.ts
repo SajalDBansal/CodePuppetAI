@@ -57,7 +57,7 @@ export function accountCommand(program: Command) {
             })
 
             logger.success(`Signed in as ${user.name} (${user.email}).`)
-            logger.info("Run 'codex-agent init' to configure this workspace.")
+            logger.info("Run 'code-puppet init' to configure this workspace.")
         })
 
     program

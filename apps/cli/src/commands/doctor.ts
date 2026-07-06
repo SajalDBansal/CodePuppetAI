@@ -44,12 +44,12 @@ export function doctorCommand(program: Command) {
                     check: "Login",
                     status:
                         auth && (await harness.auth.isAuthenticated()) ? "ok" : "warning",
-                    detail: auth ? auth.user.email : "Run codex-agent login",
+                    detail: auth ? auth.user.email : "Run code-puppet login",
                 },
                 {
                     check: "Configuration",
                     status: config ? "ok" : "warning",
-                    detail: config ? `${config.providerId} / ${config.modelId}` : "Run codex-agent init",
+                    detail: config ? `${config.providerId} / ${config.modelId}` : "Run code-puppet init",
                 },
                 {
                     check: "Catalog cache",

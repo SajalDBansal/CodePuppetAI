@@ -19,7 +19,7 @@ export class AuthenticationRequiredError extends Error {
 }
 
 export class InitializationRequiredError extends Error {
-    constructor(message = "Initialization is required. Run 'codex-agent init'.") {
+    constructor(message = "Initialization is required. Run 'code-puppet init'.") {
         super(message)
         this.name = "InitializationRequiredError"
     }

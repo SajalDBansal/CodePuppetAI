@@ -75,7 +75,7 @@ export function authCommand(program: Command) {
             }
             const credentials = await harness.api.listCredentials()
             if (credentials.length === 0) {
-                throw new CliUsageError("No credentials are saved. Run 'codex-agent auth add'.")
+                throw new CliUsageError("No credentials are saved. Run 'code-puppet auth add'.")
             }
             const answer = await inquirer.prompt<{ credentialId: string }>([
                 {
