@@ -17,7 +17,7 @@ export const errorHandler = (
                 databaseErrorCode === "P2002" || databaseErrorCode === "P2003" ? 409 : 500;
 
     const code = knownError ? err.code :
-        authError ? "AUTH_ERROR" :
+        authError ? (err.body?.code ?? err.body?.error ?? "AUTH_ERROR") :
             databaseErrorCode === "P2025" ? "NOT_FOUND" :
                 databaseErrorCode === "P2002" ? "DUPLICATE_RECORD" :
                     databaseErrorCode === "P2003" ? "RECORD_IN_USE"
@@ -26,7 +26,8 @@ export const errorHandler = (
     const message =
         statusCode >= 500 && process.env.NODE_ENV === "production"
             ? "An unexpected server error occurred."
-            : err.message
+            : authError ? (err.body?.message ?? err.body?.error_description ?? err.message)
+                : err.message
 
     console.error({
         code,

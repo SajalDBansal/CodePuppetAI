@@ -34,7 +34,7 @@ export class ConfigurationController {
 
         const defaultModel = defaultProvider?.models[0];
         return response.status(200).json({
-            defauls: {
+            defaults: {
                 providerId: defaultProvider?.providerId ?? null,
                 modelId: defaultModel?.modelId ?? null,
                 contextWindow: defaultModel?.contextWindow ?? null,
