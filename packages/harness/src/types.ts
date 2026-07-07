@@ -26,7 +26,7 @@ export const CredentialMetadataSchema = z.object({
 })
 
 export const HarnessConfigSchema = z.object({
-    schemaVersion: z.literal(1).default(1),
+    schemaVersion: z.number().default(1),
     apiUrl: z.url().default(""),
     providerId: z.string().min(1).default("openai"),
     modelId: z.string().min(1).default("gpt-5"),
@@ -43,7 +43,10 @@ export interface BootstrapConfiguration {
         contextWindow: number | null
         maxOutputTokens: number | null
     }
-    settings: Record<string, unknown>
+    settings: {
+        apiUrl: string,
+        schemaVersion: number
+    }
 }
 
 export const CatalogModelSchema = z.object({

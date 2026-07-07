@@ -41,8 +41,7 @@ export function initCommand(program: Command) {
             const previous = await harness.config.get()
             const now = new Date().toISOString()
             await harness.config.set({
-                schemaVersion: 1,
-                apiUrl: apiUrl,
+                ...bootstrap.settings,
                 providerId: provider.providerId,
                 modelId: model.modelId,
                 workspaceRoots: [workspace.workspaceRoot],
