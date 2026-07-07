@@ -10,11 +10,13 @@ async function seed() {
                 displayName: provider.displayName,
                 description: provider.description,
                 documentationUrl: provider.documentationUrl,
+                isDefault: provider.isDefault,
             },
             update: {
                 displayName: provider.displayName,
                 description: provider.description,
                 documentationUrl: provider.documentationUrl,
+                isDefault: provider.isDefault,
             }
         })
 
