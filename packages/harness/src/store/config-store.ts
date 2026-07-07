@@ -11,7 +11,7 @@ export class ConfigStore {
     readonly filePath: string
 
     constructor(paths = new HarnessPath()) {
-        this.filePath = paths.authFile
+        this.filePath = paths.configFile
     }
 
     async get(): Promise<HarnessConfig | null> {

@@ -65,7 +65,7 @@ export class APIClient {
     }
 
     async listModels(providerId?: string) {
-        const search = providerId ? `?providersId=${providerId}` : "";
+        const search = providerId ? `?providerId=${providerId}` : "";
         const response = await this.request<{ models: unknown[] }>(`/catalog/models${search}`, { authenticated: false });
         return response.models.map((model => CatalogModelSchema.parse(model)));
     }
