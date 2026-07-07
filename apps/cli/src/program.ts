@@ -2,7 +2,7 @@ import { errorMessage } from "./utils/error.js";
 import { Command, CommanderError } from "commander";
 import { ENV_CONFIG, logger } from "./utils/context.js";
 import { installPrehooks } from "./hook.js";
-import { accountCommand, authCommand, doctorCommand, initCommand, listCommand } from "./commands/index.js"
+import { accountCommand, authCommand, configCommand, doctorCommand, initCommand, listCommand } from "./commands/index.js"
 
 export async function runCli(args: string[], cwd = process.cwd()): Promise<void> {
     const program = buildProgram();
@@ -56,6 +56,9 @@ function buildProgram(cwd = process.cwd()): Command {
 
     // doctor
     doctorCommand(program);
+
+    // config
+    configCommand(program);
 
     program.action(() => program.outputHelp())
     program.addHelpText(
