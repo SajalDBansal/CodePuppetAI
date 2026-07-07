@@ -1,6 +1,8 @@
 import { Command } from "commander";
 import { harness, logger } from "../utils/context.js";
 import { formatNumber } from "../utils/format.js";
+import { CliUsageError } from "../utils/error.js";
+import { CatalogProvider } from "@workspace/harness";
 
 interface ListOptions {
     providers?: boolean
@@ -37,7 +39,7 @@ export function listCommand(program: Command) {
 }
 
 async function listProviders() {
-    const providers = await harness.api.listProviders();
+    const providers = await loadCatalogProviders();
     logger.heading("Providers");
     logger.table(
         ["Provider", "Name", "Models", "Default", "Documentation"],
@@ -52,7 +54,10 @@ async function listProviders() {
 }
 
 async function listModels(requestedProvider?: string): Promise<void> {
-    const models = await harness.api.listModels(requestedProvider)
+    const providers = await loadCatalogProviders();
+    const models = providers
+        .filter((provider) => !requestedProvider || provider.providerId === requestedProvider)
+        .flatMap((provider) => provider.models);
     logger.heading(requestedProvider ? `Models for ${requestedProvider}` : "Models")
     logger.table(
         ["Provider", "Model", "Name", "Context", "Output", "Tools", "Default"],
@@ -66,6 +71,14 @@ async function listModels(requestedProvider?: string): Promise<void> {
             model.isDefault ? "yes" : "",
         ])
     )
+}
+
+async function loadCatalogProviders(): Promise<CatalogProvider[]> {
+    const catalog = await harness.catalog.get();
+    if (!catalog) {
+        throw new CliUsageError("No provider catalog is cached. Run 'code-puppet init' first.");
+    }
+    return catalog.providers;
 }
 
 function listTools(): void {
