@@ -28,6 +28,7 @@ model User {
   deviceCodes         DeviceCode[]
   providerCredentials ProviderCredential[]
   auditLogs           AuditLog[]
+  usageEvents         UsageEvent[]
 
   @@unique([email])
   @@map("user")
@@ -162,8 +163,9 @@ model ProviderCredential {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  provider ProviderCatalog @relation(fields: [providerId], references: [providerId], onDelete: Restrict)
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          ProviderCatalog    @relation(fields: [providerId], references: [providerId], onDelete: Restrict)
+  agentInteractions AgentInteraction[]
 
   @@unique([userId, providerId, label])
   @@index([userId, providerId])
@@ -197,4 +199,171 @@ model ApplicationSetting {
   updatedAt   DateTime @updatedAt
 
   @@index([isPublic])
+}
+
+enum SessionStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum AgentMode {
+  ASK
+  PLAN
+  CODE
+  AUTO
+}
+
+enum ThinkingLevel {
+  INSTANT
+  MID
+  HIGH
+}
+
+model AgentSession {
+  id            String                   @id @default(uuid())
+  userId        String
+  providerId    String
+  modelId       String
+  title         String?
+  systemPrompt  String?
+  status        SessionStatus            @default(ACTIVE) // active | archived
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  lastMessageAt DateTime                 @default(now())
+  interactions  AgentInteraction[]
+  turns         AgentTurn[]
+  messages      AgentMessage[]
+  compactions   AgentSessionCompaction[]
+  usageEvents   UsageEvent[]
+
+  @@index([userId, status, lastMessageAt])
+}
+
+enum InteractionStatus {
+  RUNNING
+  COMPLETED
+  ERROR
+  CANCELLED
+}
+
+model AgentInteraction {
+  id              String            @id @default(uuid())
+  sessionId       String
+  sequence        Int
+  providerId      String
+  modelId         String
+  mode            AgentMode
+  thinkingLevel   ThinkingLevel
+  temperature     Float?
+  maxOutputTokens Int?
+  inputTokens     Int?
+  outputTokens    Int?
+  status          InteractionStatus @default(RUNNING)
+  startedAt       DateTime          @default(now())
+  completedAt     DateTime?
+  credentialId    String?
+
+  credential ProviderCredential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
+  session    AgentSession        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  turns      AgentTurn[]
+  messages   AgentMessage[]
+
+  @@unique([sessionId, sequence])
+  @@index([sessionId, startedAt])
+}
+
+enum StopReason {
+  END_TURN
+  TOOL_USE
+  MAX_TOKENS
+  STOP_SEQUENCE
+  CANCELLED
+  ERROR
+  UNKNOWN
+}
+
+model AgentTurn {
+  id              String      @id @default(uuid())
+  sessionId       String
+  interactionId   String
+  sequence        Int
+  responseId      String?
+  stopReason      StopReason?
+  inputTokens     Int         @default(0)
+  outputTokens    Int         @default(0)
+  cachedTokens    Int         @default(0)
+  reasoningTokens Int         @default(0)
+  createdAt       DateTime    @default(now())
+
+  session     AgentSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  interaction AgentInteraction @relation(fields: [interactionId], references: [id], onDelete: Cascade)
+  messages    AgentMessage[]
+  usageEvents UsageEvent[]
+
+  @@unique([interactionId, sequence])
+  @@index([interactionId])
+}
+
+enum MessageRole {
+  SYSTEM
+  USER
+  ASSISTANT
+  TOOL
+}
+
+model AgentMessage {
+  id               String      @id @default(uuid())
+  sessionId        String
+  interactionId    String
+  turnId           String? // null for the user message that opens the interaction
+  sequence         Int
+  role             MessageRole
+  content          String?
+  toolCalls        Json? // assistant-provided: [{id, name, arguments}]
+  toolCallId       String? // tool-result rows: which call this answers
+  name             String? // tool-result rows: tool name
+  isError          Boolean?
+  providerMetadata Json? // e.g. { google: { thoughtSignature } }
+  createdAt        DateTime    @default(now())
+
+  session     AgentSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  interaction AgentInteraction @relation(fields: [interactionId], references: [id], onDelete: Cascade)
+  turn        AgentTurn?       @relation(fields: [turnId], references: [id], onDelete: SetNull)
+
+  @@unique([sessionId, sequence])
+  @@index([interactionId, sequence])
+}
+
+model AgentSessionCompaction {
+  id                 String   @id @default(uuid())
+  sessionId          String
+  summary            String
+  coversFromSequence Int
+  coversToSequence   Int
+  createdAt          DateTime @default(now())
+
+  session AgentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, coversToSequence])
+}
+
+model UsageEvent {
+  id         String   @id @default(uuid())
+  sessionId  String
+  turnId     String?
+  userId     String
+  providerId String?
+  modelId    String?
+  costUsd    Decimal  @default(0) @db.Decimal(14, 8)
+  latencyMs  Int?
+  metadata   Json? // dont know if required or not
+  createdAt  DateTime @default(now())
+
+  session AgentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  turn    AgentTurn?   @relation(fields: [turnId], references: [id], onDelete: SetNull)
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@index([turnId])
+  @@index([userId, createdAt])
 }
