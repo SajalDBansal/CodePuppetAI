@@ -10,8 +10,12 @@
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {
-        "zod": "^4.4.3",
-        "@workspace/protocol": "*"
+        "@anthropic-ai/sdk": "^0.116.0",
+        "@google/genai": "^2.16.0",
+        "@workspace/protocol": "*",
+        "@workspace/tool-registry": "*",
+        "openai": "^7.4.0",
+        "zod": "^4.4.3"
     },
     "devDependencies": {}
 }
