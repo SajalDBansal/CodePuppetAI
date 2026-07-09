@@ -1,0 +1,1388 @@
+<style>
+  :root {
+    --paper: #F5F3EE;
+    --surface: #FFFFFF;
+    --surface-2: #FBFAF6;
+    --ink: #1D2320;
+    --ink-soft: #565F5A;
+    --ink-faint: #8A9089;
+    --rule: #DEDACF;
+    --rule-strong: #C7C2B4;
+    --accent: #1F6E6B;
+    --accent-ink: #0E3F3D;
+    --accent-tint: #E3EEEC;
+    --sev-high: #B4432A;
+    --sev-high-tint: #F5E4DE;
+    --sev-med: #A6791A;
+    --sev-med-tint: #F3ECDC;
+    --sev-good: #3D7A52;
+    --sev-good-tint: #E4EEE6;
+    --code-bg: #EFEDE5;
+    --shadow: 0 1px 2px rgba(29, 35, 32, 0.06), 0 4px 16px rgba(29, 35, 32, 0.05);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #14181A;
+      --surface: #1B2023;
+      --surface-2: #1F2528;
+      --ink: #E8E6DF;
+      --ink-soft: #9BA39C;
+      --ink-faint: #6B726C;
+      --rule: #2B3134;
+      --rule-strong: #3A4144;
+      --accent: #5AC0BB;
+      --accent-ink: #BEEAE6;
+      --accent-tint: #1B2E2C;
+      --sev-high: #E27055;
+      --sev-high-tint: #33211B;
+      --sev-med: #D6A83D;
+      --sev-med-tint: #322A18;
+      --sev-good: #6FBF86;
+      --sev-good-tint: #1D2B21;
+      --code-bg: #1A1F21;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper: #14181A;
+    --surface: #1B2023;
+    --surface-2: #1F2528;
+    --ink: #E8E6DF;
+    --ink-soft: #9BA39C;
+    --ink-faint: #6B726C;
+    --rule: #2B3134;
+    --rule-strong: #3A4144;
+    --accent: #5AC0BB;
+    --accent-ink: #BEEAE6;
+    --accent-tint: #1B2E2C;
+    --sev-high: #E27055;
+    --sev-high-tint: #33211B;
+    --sev-med: #D6A83D;
+    --sev-med-tint: #322A18;
+    --sev-good: #6FBF86;
+    --sev-good-tint: #1D2B21;
+    --code-bg: #1A1F21;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0 20px 96px;
+  }
+
+  .mono {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+  }
+
+  main {
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  .wide {
+    max-width: 980px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* ---------- Header ---------- */
+
+  header.doc-head {
+    max-width: 760px;
+    margin: 64px auto 8px;
+  }
+
+  .eyebrow {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+    font-size: 12.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 14px;
+  }
+
+  h1 {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+    font-size: clamp(28px, 4vw, 38px);
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    margin: 0 0 14px;
+    color: var(--ink);
+  }
+
+  .doc-subtitle {
+    font-size: 17px;
+    color: var(--ink-soft);
+    max-width: 62ch;
+    margin: 0 0 22px;
+  }
+
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 20px;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+    font-size: 12.5px;
+    color: var(--ink-faint);
+    border-top: 1px solid var(--rule);
+    padding-top: 16px;
+    margin-bottom: 8px;
+  }
+
+  .meta-row span b {
+    color: var(--ink-soft);
+    font-weight: 600;
+  }
+
+  /* ---------- Verdict strip ---------- */
+
+  .verdict {
+    max-width: 760px;
+    margin: 36px auto 0;
+    padding: 20px 22px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    box-shadow: var(--shadow);
+  }
+
+  .verdict p {
+    margin: 0 0 16px;
+  }
+
+  .verdict p:last-child {
+    margin-bottom: 0;
+  }
+
+  .stat-strip {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .stat-pill {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--rule-strong);
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: none;
+  }
+
+  .dot.high {
+    background: var(--sev-high);
+  }
+
+  .dot.med {
+    background: var(--sev-med);
+  }
+
+  .dot.low {
+    background: var(--sev-good);
+  }
+
+  /* ---------- Section chrome ---------- */
+
+  section {
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  section.wide-section {
+    max-width: 980px;
+  }
+
+  .section-head {
+    margin-top: 68px;
+    margin-bottom: 22px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .section-tag {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+    font-size: 12.5px;
+    color: var(--ink-faint);
+    white-space: nowrap;
+  }
+
+  h2 {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  h3 {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+    font-size: 16px;
+    font-weight: 700;
+    margin: 30px 0 10px;
+    color: var(--ink);
+  }
+
+  p {
+    margin: 0 0 14px;
+  }
+
+  ul,
+  ol {
+    margin: 0 0 16px;
+    padding-left: 22px;
+  }
+
+  li {
+    margin-bottom: 6px;
+  }
+
+  a {
+    color: var(--accent);
+  }
+
+  code {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+    background: var(--code-bg);
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+    font-size: 0.88em;
+  }
+
+  pre {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+    background: var(--code-bg);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 14px 16px;
+    font-size: 13px;
+    line-height: 1.55;
+    overflow-x: auto;
+    margin: 0 0 18px;
+  }
+
+  pre code {
+    background: none;
+    padding: 0;
+  }
+
+  /* ---------- TOC ---------- */
+
+  .toc {
+    max-width: 760px;
+    margin: 40px auto 0;
+    padding: 18px 22px;
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+  }
+
+  .toc-title {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 10px;
+  }
+
+  .toc ol {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    columns: 2;
+    column-gap: 24px;
+  }
+
+  .toc li {
+    margin-bottom: 7px;
+    break-inside: avoid;
+  }
+
+  .toc a {
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 14.5px;
+  }
+
+  .toc a:hover {
+    color: var(--accent);
+  }
+
+  .toc-num {
+    color: var(--ink-faint);
+    font-family: ui-monospace, monospace;
+    margin-right: 6px;
+    font-size: 12.5px;
+  }
+
+  /* ---------- Model cards ---------- */
+
+  .model-card {
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    background: var(--surface);
+    margin-bottom: 18px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+
+  .model-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .model-name {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--accent-ink);
+  }
+
+  .model-when {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+    font-size: 11.5px;
+    color: var(--ink-faint);
+    text-align: right;
+  }
+
+  .model-body {
+    padding: 14px 16px 16px;
+  }
+
+  .model-body p {
+    margin-bottom: 10px;
+    font-size: 15px;
+  }
+
+  .model-body p:last-child {
+    margin-bottom: 0;
+  }
+
+  .feed-list {
+    margin: 10px 0 0;
+    padding-left: 0;
+    list-style: none;
+  }
+
+  .feed-list li {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 10px;
+    font-size: 13.5px;
+    padding: 5px 0;
+    border-top: 1px dashed var(--rule);
+  }
+
+  .feed-list li:first-child {
+    border-top: none;
+  }
+
+  .feed-key {
+    font-family: ui-monospace, monospace;
+    color: var(--ink-soft);
+  }
+
+  /* ---------- Diagrams ---------- */
+
+  figure {
+    margin: 0 0 30px;
+  }
+
+  .diagram-frame {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 18px;
+    overflow-x: auto;
+    box-shadow: var(--shadow);
+  }
+
+  figcaption {
+    margin-top: 10px;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    text-align: center;
+  }
+
+  svg {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+  }
+
+  /* ---------- Tables ---------- */
+
+  .table-wrap {
+    overflow-x: auto;
+    margin: 0 0 20px;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 13.5px;
+    background: var(--surface);
+  }
+
+  th,
+  td {
+    text-align: left;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--rule);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  th {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-faint);
+    background: var(--surface-2);
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+
+  td.mono,
+  td code {
+    font-family: ui-monospace, monospace;
+  }
+
+  /* ---------- Findings ---------- */
+
+  .finding {
+    display: grid;
+    grid-template-columns: 5px 1fr;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    margin-bottom: 16px;
+    background: var(--surface);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+
+  .finding-stripe.high {
+    background: var(--sev-high);
+  }
+
+  .finding-stripe.med {
+    background: var(--sev-med);
+  }
+
+  .finding-stripe.low {
+    background: var(--sev-good);
+  }
+
+  .finding-body {
+    padding: 16px 18px;
+  }
+
+  .finding-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+
+  .sev-tag {
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 3px;
+  }
+
+  .sev-tag.high {
+    background: var(--sev-high-tint);
+    color: var(--sev-high);
+  }
+
+  .sev-tag.med {
+    background: var(--sev-med-tint);
+    color: var(--sev-med);
+  }
+
+  .sev-tag.low {
+    background: var(--sev-good-tint);
+    color: var(--sev-good);
+  }
+
+  .finding-title {
+    font-weight: 700;
+    font-size: 15.5px;
+  }
+
+  .finding-body p {
+    font-size: 14.5px;
+    margin-bottom: 10px;
+  }
+
+  .fix-label {
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-faint);
+    margin: 12px 0 6px;
+  }
+
+  /* ---------- Checklist ---------- */
+
+  .check-table td:first-child {
+    font-family: ui-monospace, monospace;
+    font-weight: 600;
+    white-space: normal;
+  }
+
+  .verdict-chip {
+    font-family: ui-monospace, monospace;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .verdict-chip.yes {
+    background: var(--sev-good-tint);
+    color: var(--sev-good);
+  }
+
+  .verdict-chip.partial {
+    background: var(--sev-med-tint);
+    color: var(--sev-med);
+  }
+
+  footer {
+    max-width: 760px;
+    margin: 80px auto 0;
+    padding-top: 20px;
+    border-top: 1px solid var(--rule);
+    font-size: 13.5px;
+    color: var(--ink-faint);
+  }
+</style>
+
+<header class="doc-head">
+  <p class="eyebrow">// packages/database/prisma/schema.prisma — review</p>
+  <h1>The agent-session schema, read end to end</h1>
+  <p class="doc-subtitle">
+    What each model is for, when it gets written, how a tool call and its result
+    actually land in the database, how compaction is created and later consulted —
+    and eight places the current schema needs a second pass before it ships.
+  </p>
+  <div class="meta-row">
+    <span><b>Scope</b> AgentSession · AgentInteraction · AgentTurn · AgentMessage · AgentSessionCompaction ·
+      UsageEvent</span>
+    <span><b>Status</b> not yet migrated</span>
+  </div>
+</header>
+
+<div class="verdict">
+  <p>
+    The shape is right — five/six tables cleanly separating <em>thread</em>,
+    <em>request</em>, <em>provider call</em>, and <em>content</em> is exactly what a
+    streaming, compactable, multi-turn agent needs, and it already reflects the
+    provider-switching and enum clean-up from the earlier design pass. Eight issues
+    below are worth fixing before the first migration, three of them real correctness
+    risks rather than polish.
+  </p>
+  <div class="stat-strip">
+    <span class="stat-pill"><span class="dot high"></span>3 high — data can silently drift or duplicate</span>
+    <span class="stat-pill"><span class="dot med"></span>3 medium — inconsistent with the model's own patterns</span>
+    <span class="stat-pill"><span class="dot low"></span>2 low — naming / design symmetry</span>
+  </div>
+</div>
+
+<nav class="toc">
+  <p class="toc-title">Contents</p>
+  <ol>
+    <li><a href="#models"><span class="toc-num">01</span>The six models, plain language</a></li>
+    <li><a href="#er"><span class="toc-num">02</span>How they connect</a></li>
+    <li><a href="#tools"><span class="toc-num">03</span>Storing a tool call and its result</a></li>
+    <li><a href="#hierarchy"><span class="toc-num">04</span>Session → Interaction → Turn → Message</a></li>
+    <li><a href="#cycle"><span class="toc-num">05</span>A request/response cycle, with real data</a></li>
+    <li><a href="#compaction"><span class="toc-num">06</span>Compaction: made, stored, used, recovered</a></li>
+    <li><a href="#findings"><span class="toc-num">07</span>Findings — what to fix and why</a></li>
+    <li><a href="#checklist"><span class="toc-num">08</span>Does it cover everything we asked for?</a></li>
+  </ol>
+</nav>
+
+<main>
+
+  <section id="models">
+    <div class="section-head">
+      <span class="section-tag">01</span>
+      <h2>The six models, plain language</h2>
+    </div>
+    <p>
+      Each model answers a different question about the same conversation. Read top to
+      bottom — they nest inside each other in exactly this order.
+    </p>
+
+    <div class="model-card">
+      <div class="model-card-head">
+        <span class="model-name">AgentSession</span>
+        <span class="model-when">created once, at chat start</span>
+      </div>
+      <div class="model-body">
+        <p><b>Question it answers:</b> "which conversation is this?" — the thing a user thinks of as one chat, from
+          opening it to archiving it. Long-lived; can span days.</p>
+        <ul class="feed-list">
+          <li><span class="feed-key">written at</span><span>session creation — <code>userId</code>, default
+              <code>providerId</code>/<code>modelId</code>, <code>mode</code>, <code>thinkingLevel</code>,
+              <code>systemPrompt</code></span></li>
+          <li><span class="feed-key">updated at</span><span>every interaction — <code>lastMessageAt</code>; possibly
+              <code>providerId</code>/<code>modelId</code> if the user switched provider</span></li>
+          <li><span class="feed-key">never stores</span><span>message content, token counts — those live one level
+              down</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="model-card">
+      <div class="model-card-head">
+        <span class="model-name">AgentInteraction</span>
+        <span class="model-when">created per user-sent message</span>
+      </div>
+      <div class="model-body">
+        <p><b>Question it answers:</b> "what did the user ask for, and is the agent still working on it?" One row per
+          <code>POST /agent-sessions/:id/interactions</code> call. A single interaction can span several provider round
+          trips if the model needs a tool result before it can answer.
+        </p>
+        <ul class="feed-list">
+          <li><span class="feed-key">written at</span><span>the user's message arrives —
+              <code>providerId</code>/<code>modelId</code> fixed for this interaction's lifetime,
+              <code>status: RUNNING</code></span></li>
+          <li><span class="feed-key">updated at</span><span>interaction finishes —
+              <code>status: COMPLETED</code>/<code>ERROR</code>, <code>completedAt</code>, rolled-up
+              <code>inputTokens</code>/<code>outputTokens</code></span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="model-card">
+      <div class="model-card-head">
+        <span class="model-name">AgentTurn</span>
+        <span class="model-when">created per provider call</span>
+      </div>
+      <div class="model-body">
+        <p><b>Question it answers:</b> "what did <em>this specific call to Google/Anthropic/OpenAI</em> return?" One row
+          per <code>providerRegistry.stream()</code> invocation — the only place provider-specific facts
+          (<code>responseId</code>, <code>stopReason</code>, per-call token usage) belong, since they don't apply to a
+          whole interaction, only to one exchange with the model.</p>
+        <ul class="feed-list">
+          <li><span class="feed-key">written at</span><span>the provider stream's <code>done</code>/<code>usage</code>
+              events fire — <code>stopReason</code>, <code>responseId</code>,
+              <code>inputTokens</code>/<code>outputTokens</code>/<code>cachedTokens</code>/<code>reasoningTokens</code></span>
+          </li>
+          <li><span class="feed-key">read at</span><span>the compaction trigger check, before every next call — compares
+              <code>inputTokens</code> to the model's <code>contextWindow</code></span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="model-card">
+      <div class="model-card-head">
+        <span class="model-name">AgentMessage</span>
+        <span class="model-when">created for every piece of content</span>
+      </div>
+      <div class="model-body">
+        <p><b>Question it answers:</b> "what was actually said?" The atomic record — one row per user message, per
+          assistant reply, per tool call, per tool result. Everything else in this schema exists to group and order
+          these rows.</p>
+        <ul class="feed-list">
+          <li><span class="feed-key">written at</span><span>user sends a message · assistant streams text/a tool call ·
+              CLI reports a tool result — every one gets the next <code>sequence</code> number in the session</span>
+          </li>
+          <li><span class="feed-key">read at</span><span>context assembly for the next provider call, and the "show full
+              history" view — see §5–6</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="model-card">
+      <div class="model-card-head">
+        <span class="model-name">AgentSessionCompaction</span>
+        <span class="model-when">created when context gets large</span>
+      </div>
+      <div class="model-body">
+        <p><b>Question it answers:</b> "what can replace the old raw transcript so the next provider call still fits in
+          the context window?" Never deletes anything — it's a pointer plus a summary, consulted only when building the
+          <em>next</em> request.
+        </p>
+        <ul class="feed-list">
+          <li><span class="feed-key">written at</span><span>after a turn whose <code>inputTokens</code> crosses ~70% of
+              <code>contextWindow</code> — <code>summary</code>, <code>coversFromSequence</code>,
+              <code>coversToSequence</code></span></li>
+          <li><span class="feed-key">read at</span><span>every context build — take the newest row, use it in place of
+              the messages it covers</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="model-card">
+      <div class="model-card-head">
+        <span class="model-name">UsageEvent</span>
+        <span class="model-when">created per turn, for billing/analytics</span>
+      </div>
+      <div class="model-body">
+        <p><b>Question it answers:</b> "what did this cost, and how long did it take?" Distinct from
+          <code>AgentTurn</code>'s usage fields on purpose — <code>AgentTurn</code> is the hot-path fact the compaction
+          check reads immediately; <code>UsageEvent</code> is the reporting-shaped row (cost in dollars, latency,
+          arbitrary metadata) a billing dashboard queries later. <b>See finding #1 — right now the token counts are
+            duplicated across both instead of this split being clean.</b>
+        </p>
+        <ul class="feed-list">
+          <li><span class="feed-key">written at</span><span>after a turn completes and <code>ModelCatalog</code> pricing
+              is applied — <code>costUsd</code>, <code>latencyMs</code></span></li>
+          <li><span class="feed-key">read at</span><span><code>code-puppet sessions show</code> totals, any future
+              billing export</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="er" class="wide-section">
+    <div class="section-head">
+      <span class="section-tag">02</span>
+      <h2>How they connect</h2>
+    </div>
+    <p>
+      <code>AgentSession</code> is the root. Everything else points back to it directly
+      <em>and</em> to its immediate parent — an <code>AgentMessage</code> knows its
+      session, its interaction, and (once one exists) its turn, all three, not just the
+      nearest one. That's deliberate: grouping and billing queries want the nearest
+      parent; replaying history for the model wants the whole set ordered by
+      <code>sequence</code> and doesn't care about parents at all.
+    </p>
+    <figure>
+      <div class="diagram-frame">
+        <svg viewBox="0 0 820 400" role="img"
+          aria-label="ProviderCredential feeds AgentSession, which has one to many AgentInteractions, each with one to many AgentTurns, each producing one to many AgentMessages. ModelCatalog's context window bounds AgentTurn. Each AgentTurn optionally costs one UsageEvent. AgentSession also links directly to AgentSessionCompaction, bypassing Interaction and Turn.">
+          <defs>
+            <marker id="er-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7"
+              orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+            </marker>
+          </defs>
+          <style>
+            text {
+              font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+              fill: currentColor;
+            }
+
+            .node {
+              fill: none;
+              stroke: currentColor;
+            }
+
+            .node-name {
+              font-size: 12px;
+              font-weight: 700;
+            }
+
+            .edge {
+              fill: none;
+              stroke: currentColor;
+              stroke-opacity: 0.55;
+            }
+
+            .edge-dashed {
+              fill: none;
+              stroke: currentColor;
+              stroke-opacity: 0.55;
+              stroke-dasharray: 4 3;
+            }
+
+            .edge-label {
+              font-size: 10px;
+              opacity: 0.68;
+            }
+          </style>
+
+          <!-- context nodes -->
+          <rect class="node" x="20" y="20" width="180" height="46" rx="4" />
+          <text class="node-name" x="110" y="48" text-anchor="middle">ProviderCredential</text>
+
+          <rect class="node" x="620" y="110" width="180" height="46" rx="4" />
+          <text class="node-name" x="710" y="138" text-anchor="middle">ModelCatalog</text>
+
+          <!-- main spine -->
+          <rect class="node" x="320" y="20" width="180" height="46" rx="4" />
+          <text class="node-name" x="410" y="48" text-anchor="middle">AgentSession</text>
+
+          <rect class="node" x="320" y="110" width="180" height="46" rx="4" />
+          <text class="node-name" x="410" y="138" text-anchor="middle">AgentInteraction</text>
+
+          <rect class="node" x="320" y="200" width="180" height="46" rx="4" />
+          <text class="node-name" x="410" y="228" text-anchor="middle">AgentTurn</text>
+
+          <rect class="node" x="320" y="290" width="180" height="46" rx="4" />
+          <text class="node-name" x="410" y="318" text-anchor="middle">AgentMessage</text>
+
+          <rect class="node" x="620" y="200" width="180" height="46" rx="4" />
+          <text class="node-name" x="710" y="228" text-anchor="middle">UsageEvent</text>
+
+          <rect class="node" x="95" y="290" width="200" height="46" rx="4" />
+          <text class="node-name" x="195" y="318" text-anchor="middle">AgentSessionCompaction</text>
+
+          <!-- edges -->
+          <line class="edge" x1="200" y1="43" x2="320" y2="43" marker-end="url(#er-arrow)" />
+          <text class="edge-label" x="205" y="36">decrypts → API key</text>
+
+          <line class="edge" x1="410" y1="66" x2="410" y2="110" marker-end="url(#er-arrow)" />
+          <text class="edge-label" x="418" y="92">1 : N</text>
+
+          <line class="edge" x1="410" y1="156" x2="410" y2="200" marker-end="url(#er-arrow)" />
+          <text class="edge-label" x="418" y="182">1 : N</text>
+
+          <line class="edge" x1="410" y1="246" x2="410" y2="290" marker-end="url(#er-arrow)" />
+          <text class="edge-label" x="418" y="272">1 : N produces</text>
+
+          <polyline class="edge" points="620,133 570,133 570,213 500,213" marker-end="url(#er-arrow)" />
+          <text class="edge-label" x="500" y="200" text-anchor="end">contextWindow bounds</text>
+
+          <line class="edge" x1="500" y1="235" x2="620" y2="235" marker-end="url(#er-arrow)" />
+          <text class="edge-label" x="505" y="250">1 : 1 optional, costs</text>
+
+          <polyline class="edge-dashed" points="320,43 195,43 195,290" marker-end="url(#er-arrow)" />
+          <text class="edge-label" x="130" y="170">1 : N, direct</text>
+        </svg>
+      </div>
+      <figcaption>Every child table also carries <code>sessionId</code> directly (only the compaction link is drawn
+        dashed as the example) — reading a session's full history never needs a multi-hop join through interaction and
+        turn.</figcaption>
+    </figure>
+  </section>
+
+  <section id="tools">
+    <div class="section-head">
+      <span class="section-tag">03</span>
+      <h2>Storing a tool call and its result</h2>
+    </div>
+    <p>
+      There's no separate <code>ToolCall</code> table — a tool call is fully described by
+      two ordinary <code>AgentMessage</code> rows: the assistant's request, and (later) the
+      result. This keeps the schema small until something needs to track a call's
+      <em>lifecycle</em> independently (pending → running → failed) — not needed yet.
+    </p>
+
+    <h3>1 — the request (assistant-authored)</h3>
+    <p>Written the moment the provider stream yields a <code>tool_call</code> event:</p>
+    <pre><code>AgentMessage {
+  sequence:  2
+  role:      ASSISTANT
+  turnId:    "T1"
+  content:   null
+  toolCalls: [
+    { "id": "tc1", "name": "list_files", "arguments": { "path": "src" } }
+  ]
+  providerMetadata: { "google": { "thoughtSignature": "..." } }
+}</code></pre>
+
+    <h3>2 — the result (tool-authored)</h3>
+    <p>Written once the CLI has actually run <code>list_files</code> locally and reports back:</p>
+    <pre><code>AgentMessage {
+  sequence:   3
+  role:       TOOL
+  turnId:     null            -- belongs to the *next* turn, not yet created
+  toolCallId: "tc1"           -- links back to the request above
+  name:       "list_files"
+  content:    "index.ts\nutils.ts\ngoogle.ts"
+  isError:    false
+}</code></pre>
+    <p>
+      <code>toolCallId</code> is the join key between the two rows — everything needed to
+      reconstruct "the model asked for X, and got Y back" is these two rows plus their
+      shared <code>toolCallId</code>, ordered by <code>sequence</code>.
+    </p>
+  </section>
+
+  <section id="hierarchy">
+    <div class="section-head">
+      <span class="section-tag">04</span>
+      <h2>Session → Interaction → Turn → Message</h2>
+    </div>
+    <p>
+      One interaction, two turns — this is the shape every tool-use exchange takes.
+      The user's message opens the interaction directly (no turn yet); each provider
+      call is its own turn box; every turn's messages nest inside it.
+    </p>
+    <figure>
+      <div class="diagram-frame">
+        <svg viewBox="0 0 760 260" role="img"
+          aria-label="A Session box contains one Interaction box, which contains a user message above two Turn boxes side by side: Turn 1 holds the assistant's tool call, Turn 2 holds the tool result and final assistant answer.">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7"
+              orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+            </marker>
+          </defs>
+          <style>
+            text {
+              font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+              fill: currentColor;
+            }
+
+            .lbl {
+              font-size: 11px;
+              letter-spacing: 0.03em;
+            }
+
+            .lbl-faint {
+              font-size: 10.5px;
+              opacity: 0.6;
+            }
+
+            .box {
+              fill: none;
+              stroke: currentColor;
+            }
+          </style>
+
+          <rect class="box" x="10" y="10" width="740" height="240" rx="4" opacity="0.35" />
+          <text class="lbl" x="24" y="30">SESSION S1 · google / gemini-2.5-pro</text>
+
+          <rect class="box" x="28" y="44" width="704" height="196" rx="4" opacity="0.55" />
+          <text class="lbl" x="42" y="64">INTERACTION I1 · RUNNING → COMPLETED</text>
+
+          <rect x="42" y="76" width="676" height="26" rx="3" fill="currentColor" opacity="0.08" stroke="currentColor"
+            stroke-opacity="0.3" />
+          <text class="lbl" x="54" y="93">seq 1 · USER · "list files in src and summarize the biggest one"</text>
+
+          <rect class="box" x="42" y="114" width="326" height="112" rx="4" />
+          <text class="lbl" x="54" y="134">TURN T1 · stopReason: tool_use</text>
+          <rect x="54" y="144" width="302" height="66" rx="3" fill="currentColor" opacity="0.08" stroke="currentColor"
+            stroke-opacity="0.3" />
+          <text class="lbl-faint" x="64" y="164">seq 2 · ASSISTANT</text>
+          <text class="lbl-faint" x="64" y="180">toolCalls: [list_files]</text>
+          <text class="lbl-faint" x="64" y="196">providerMetadata.google.thoughtSignature</text>
+
+          <rect class="box" x="392" y="114" width="326" height="112" rx="4" />
+          <text class="lbl" x="404" y="134">TURN T2 · stopReason: end_turn</text>
+          <rect x="404" y="144" width="302" height="30" rx="3" fill="currentColor" opacity="0.08" stroke="currentColor"
+            stroke-opacity="0.3" />
+          <text class="lbl-faint" x="414" y="163">seq 3 · TOOL · result of tc1</text>
+          <rect x="404" y="180" width="302" height="30" rx="3" fill="currentColor" opacity="0.08" stroke="currentColor"
+            stroke-opacity="0.3" />
+          <text class="lbl-faint" x="414" y="199">seq 4 · ASSISTANT · final answer</text>
+
+          <line x1="368" y1="170" x2="390" y2="170" stroke="currentColor" marker-end="url(#arrow)" />
+          <text class="lbl-faint" x="371" y="150" text-anchor="start">CLI runs the tool,</text>
+          <text class="lbl-faint" x="371" y="238" text-anchor="start">POSTs the result</text>
+        </svg>
+      </div>
+      <figcaption>Every message's <code>turnId</code> places it in exactly one turn; every turn's
+        <code>interactionId</code> places it in exactly one interaction — but the model-facing read path (§5) ignores
+        this nesting entirely and just walks <code>sequence</code> in a straight line.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section id="cycle" class="wide-section">
+    <div class="section-head">
+      <span class="section-tag">05</span>
+      <h2>A request/response cycle, with real data</h2>
+    </div>
+    <p>
+      Tools execute on the user's machine, not the backend — the API server never has
+      filesystem access. So each provider call is <em>exactly one</em> HTTP round trip:
+      the stream closes the moment that call finishes, and if a tool needs running, the
+      CLI makes a second, separate call once it has the result. Below is the full cycle
+      for "list files in <code>src</code> and summarize the biggest one."
+    </p>
+    <figure>
+      <div class="diagram-frame">
+        <svg viewBox="0 0 780 545" role="img"
+          aria-label="Sequence diagram: CLI posts a new interaction, API records it and streams a provider call to the LLM, which requests a tool call; the stream closes and the CLI runs the tool locally; the CLI posts the tool result, and the API runs a second provider call that returns the final answer, completing the interaction.">
+          <defs>
+            <marker id="seq-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7"
+              orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+            </marker>
+          </defs>
+          <style>
+            text {
+              font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+              fill: currentColor;
+            }
+
+            .actor-box {
+              fill: none;
+              stroke: currentColor;
+              stroke-opacity: 0.6;
+            }
+
+            .actor-name {
+              font-size: 11.5px;
+              font-weight: 700;
+            }
+
+            .lifeline {
+              stroke: currentColor;
+              stroke-opacity: 0.22;
+            }
+
+            .msg {
+              fill: none;
+              stroke: currentColor;
+            }
+
+            .msg-dashed {
+              fill: none;
+              stroke: currentColor;
+              stroke-dasharray: 4 3;
+            }
+
+            .msg-label {
+              font-size: 10.3px;
+            }
+
+            .note-box {
+              fill: currentColor;
+              fill-opacity: 0.07;
+              stroke: currentColor;
+              stroke-opacity: 0.35;
+            }
+
+            .note-text {
+              font-size: 10px;
+              opacity: 0.75;
+            }
+          </style>
+
+          <!-- actor headers -->
+          <rect class="actor-box" x="20" y="14" width="140" height="32" rx="4" />
+          <text class="actor-name" x="90" y="34" text-anchor="middle">CLI</text>
+
+          <rect class="actor-box" x="245" y="14" width="170" height="32" rx="4" />
+          <text class="actor-name" x="330" y="34" text-anchor="middle">agent-session service</text>
+
+          <rect class="actor-box" x="470" y="14" width="130" height="32" rx="4" />
+          <text class="actor-name" x="535" y="34" text-anchor="middle">Postgres</text>
+
+          <rect class="actor-box" x="625" y="14" width="140" height="32" rx="4" />
+          <text class="actor-name" x="695" y="34" text-anchor="middle">Google LLM</text>
+
+          <!-- lifelines -->
+          <line class="lifeline" x1="90" y1="46" x2="90" y2="520" />
+          <line class="lifeline" x1="330" y1="46" x2="330" y2="520" />
+          <line class="lifeline" x1="535" y1="46" x2="535" y2="520" />
+          <line class="lifeline" x1="695" y1="46" x2="695" y2="520" />
+
+          <!-- 1 -->
+          <text class="msg-label" x="94" y="72">POST /agent-sessions { message }</text>
+          <line class="msg" x1="90" y1="78" x2="330" y2="78" marker-end="url(#seq-arrow)" />
+
+          <!-- 2 -->
+          <text class="msg-label" x="334" y="104">insert Session S1, Interaction I1 (RUNNING), Message seq=1</text>
+          <line class="msg" x1="330" y1="110" x2="535" y2="110" marker-end="url(#seq-arrow)" />
+
+          <!-- 3 -->
+          <text class="msg-label" x="334" y="136">stream(context = [seq 1])</text>
+          <line class="msg" x1="330" y1="142" x2="695" y2="142" marker-end="url(#seq-arrow)" />
+
+          <!-- 4 -->
+          <text class="msg-label" x="690" y="168" text-anchor="end">tool_call { list_files, path: "src" }</text>
+          <line class="msg-dashed" x1="695" y1="174" x2="330" y2="174" marker-end="url(#seq-arrow)" />
+
+          <!-- 5 -->
+          <text class="msg-label" x="334" y="200">insert Turn T1 (tool_use), Message seq=2</text>
+          <line class="msg" x1="330" y1="206" x2="535" y2="206" marker-end="url(#seq-arrow)" />
+
+          <!-- 6 -->
+          <text class="msg-label" x="326" y="232" text-anchor="end">NDJSON: tool_call, usage, done — stream
+            closes</text>
+          <line class="msg-dashed" x1="330" y1="238" x2="90" y2="238" marker-end="url(#seq-arrow)" />
+
+          <!-- note -->
+          <rect class="note-box" x="20" y="252" width="290" height="26" rx="3" />
+          <text class="note-text" x="30" y="269">CLI runs list_files("src") on local disk</text>
+
+          <!-- 7 -->
+          <text class="msg-label" x="94" y="304">POST .../tool-results { toolCallId: tc1, output }</text>
+          <line class="msg" x1="90" y1="310" x2="330" y2="310" marker-end="url(#seq-arrow)" />
+
+          <!-- 8 -->
+          <text class="msg-label" x="334" y="336">insert Message seq=3 (tool result)</text>
+          <line class="msg" x1="330" y1="342" x2="535" y2="342" marker-end="url(#seq-arrow)" />
+
+          <!-- 9 -->
+          <text class="msg-label" x="334" y="368">stream(context = [seq 1..3])</text>
+          <line class="msg" x1="330" y1="374" x2="695" y2="374" marker-end="url(#seq-arrow)" />
+
+          <!-- 10 -->
+          <text class="msg-label" x="690" y="400" text-anchor="end">text_delta "The biggest file is utils.ts..."</text>
+          <line class="msg-dashed" x1="695" y1="406" x2="330" y2="406" marker-end="url(#seq-arrow)" />
+
+          <!-- 11 -->
+          <text class="msg-label" x="334" y="432">insert Turn T2 (end_turn), Message seq=4</text>
+          <line class="msg" x1="330" y1="438" x2="535" y2="438" marker-end="url(#seq-arrow)" />
+
+          <!-- 12 -->
+          <text class="msg-label" x="334" y="464">update Interaction I1 → COMPLETED, roll up tokens</text>
+          <line class="msg" x1="330" y1="470" x2="535" y2="470" marker-end="url(#seq-arrow)" />
+
+          <!-- 13 -->
+          <text class="msg-label" x="326" y="496" text-anchor="end">NDJSON: text_delta*, usage, done</text>
+          <line class="msg-dashed" x1="330" y1="502" x2="90" y2="502" marker-end="url(#seq-arrow)" />
+        </svg>
+      </div>
+      <figcaption>Two HTTP requests, two provider calls, one interaction. Dashed arrows are responses. The stream never
+        stays open waiting on local tool execution.</figcaption>
+    </figure>
+
+    <h3>What actually lands in each table</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Table</th>
+            <th>Row</th>
+            <th>Key fields</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mono">AgentSession</td>
+            <td>S1</td>
+            <td>providerId=google, modelId=gemini-2.5-pro, mode=CODE</td>
+          </tr>
+          <tr>
+            <td class="mono">AgentInteraction</td>
+            <td>I1</td>
+            <td>status: RUNNING → COMPLETED</td>
+          </tr>
+          <tr>
+            <td class="mono">AgentTurn</td>
+            <td>T1</td>
+            <td>stopReason=tool_use, inputTokens=812, outputTokens=40</td>
+          </tr>
+          <tr>
+            <td class="mono">AgentMessage</td>
+            <td>seq 1</td>
+            <td>role=USER, "list files in src..."</td>
+          </tr>
+          <tr>
+            <td class="mono">AgentMessage</td>
+            <td>seq 2</td>
+            <td>role=ASSISTANT, turnId=T1, toolCalls=[list_files]</td>
+          </tr>
+          <tr>
+            <td class="mono">AgentMessage</td>
+            <td>seq 3</td>
+            <td>role=TOOL, toolCallId=tc1, "index.ts\nutils.ts..."</td>
+          </tr>
+          <tr>
+            <td class="mono">AgentTurn</td>
+            <td>T2</td>
+            <td>stopReason=end_turn, inputTokens=940, outputTokens=88</td>
+          </tr>
+          <tr>
+            <td class="mono">AgentMessage</td>
+            <td>seq 4</td>
+            <td>role=ASSISTANT, turnId=T2, "The biggest file is utils.ts..."</td>
+          </tr>
+          <tr>
+            <td class="mono">UsageEvent</td>
+            <td>×2</td>
+            <td>one per turn — costUsd computed from ModelCatalog rates</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="compaction" class="wide-section">
+    <div class="section-head">
+      <span class="section-tag">06</span>
+      <h2>Compaction: made, stored, used, recovered</h2>
+    </div>
+    <p>
+      Compaction is checked right before every provider call, using the previous turn's
+      <code>inputTokens</code> against that model's <code>contextWindow</code>
+      (<code>ModelCatalog</code>). Crossing ~70% triggers it — asynchronously, so it
+      never blocks the response the user is waiting on.
+    </p>
+
+    <figure>
+      <div class="diagram-frame">
+        <svg viewBox="0 0 760 220" role="img"
+          aria-label="Before compaction, the context sent to the model is 34 raw messages totaling about 38 thousand tokens. After compaction, sequence 1 through 28 collapse into one summary block, and only the last 6 raw messages plus the summary are sent, totaling about 9 thousand tokens.">
+          <style>
+            text {
+              font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+              fill: currentColor;
+            }
+
+            .lbl {
+              font-size: 11.5px;
+            }
+
+            .lbl-faint {
+              font-size: 10.5px;
+              opacity: 0.6;
+            }
+          </style>
+
+          <text class="lbl" x="14" y="26">BEFORE — loadContext(S1) sends all 34 raw messages</text>
+          <g transform="translate(14,40)">
+            <rect x="0" y="0" width="700" height="26" rx="3" fill="none" stroke="currentColor" stroke-opacity="0.4" />
+            <!-- 34 ticks -->
+            <g stroke="currentColor" stroke-opacity="0.35">
+              <line x1="20.6" y1="0" x2="20.6" y2="26" />
+              <line x1="41.2" y1="0" x2="41.2" y2="26" />
+              <line x1="61.8" y1="0" x2="61.8" y2="26" />
+              <line x1="82.4" y1="0" x2="82.4" y2="26" />
+              <line x1="103" y1="0" x2="103" y2="26" />
+              <line x1="123.6" y1="0" x2="123.6" y2="26" />
+              <line x1="144.2" y1="0" x2="144.2" y2="26" />
+              <line x1="164.8" y1="0" x2="164.8" y2="26" />
+              <line x1="185.4" y1="0" x2="185.4" y2="26" />
+              <line x1="206" y1="0" x2="206" y2="26" />
+              <line x1="226.6" y1="0" x2="226.6" y2="26" />
+              <line x1="247.2" y1="0" x2="247.2" y2="26" />
+              <line x1="267.8" y1="0" x2="267.8" y2="26" />
+              <line x1="288.4" y1="0" x2="288.4" y2="26" />
+              <line x1="309" y1="0" x2="309" y2="26" />
+              <line x1="329.6" y1="0" x2="329.6" y2="26" />
+              <line x1="350.2" y1="0" x2="350.2" y2="26" />
+              <line x1="370.8" y1="0" x2="370.8" y2="26" />
+              <line x1="391.4" y1="0" x2="391.4" y2="26" />
+              <line x1="412" y1="0" x2="412" y2="26" />
+              <line x1="432.6" y1="0" x2="432.6" y2="26" />
+              <line x1="453.2" y1="0" x2="453.2" y2="26" />
+              <line x1="473.8" y1="0" x2="473.8" y2="26" />
+              <line x1="494.4" y1="0" x2="494.4" y2="26" />
+              <line x1="515" y1="0" x2="515" y2="26" />
+              <line x1="535.6" y1="0" x2="535.6" y2="26" />
+              <line x1="556.2" y1="0" x2="556.2" y2="26" />
+              <line x1="576.8" y1="0" x2="576.8" y2="26" />
+              <line x1="597.4" y1="0" x2="597.4" y2="26" />
+              <line x1="618" y1="0" x2="618" y2="26" />
+              <line x1="638.6" y1="0" x2="638.6" y2="26" />
+              <line x1="659.2" y1="0" x2="659.2" y2="26" />
+              <line x1="679.8" y1="0" x2="679.8" y2="26" />
+            </g>
+            <text class="lbl-faint" x="0" y="42">seq 1</text>
+            <text class="lbl-faint" x="676" y="42" text-anchor="end">seq 34</text>
+            <text class="lbl-faint" x="700" y="16" text-anchor="end">~38K tokens</text>
+          </g>
+
+          <line x1="364" y1="82" x2="364" y2="106" stroke="currentColor" marker-end="url(#arrow)" />
+          <text class="lbl-faint" x="374" y="98">compaction runs, coversToSequence = 28</text>
+
+          <text class="lbl" x="14" y="132">AFTER — loadContext(S1) sends 1 summary + last 6 raw</text>
+          <g transform="translate(14,146)">
+            <rect x="0" y="0" width="560" height="26" rx="3" fill="currentColor" fill-opacity="0.12"
+              stroke="currentColor" />
+            <text class="lbl-faint" x="10" y="17">AgentSessionCompaction · covers seq 1–28</text>
+            <rect x="576" y="0" width="20.6" height="26" rx="2" fill="none" stroke="currentColor"
+              stroke-opacity="0.45" />
+            <rect x="600.6" y="0" width="20.6" height="26" rx="2" fill="none" stroke="currentColor"
+              stroke-opacity="0.45" />
+            <rect x="625.2" y="0" width="20.6" height="26" rx="2" fill="none" stroke="currentColor"
+              stroke-opacity="0.45" />
+            <rect x="649.8" y="0" width="20.6" height="26" rx="2" fill="none" stroke="currentColor"
+              stroke-opacity="0.45" />
+            <rect x="674.4" y="0" width="20.6" height="26" rx="2" fill="none" stroke="currentColor"
+              stroke-opacity="0.45" />
+            <rect x="699" y="0" width="20.6" height="26" rx="2" fill="none" stroke="currentColor"
+              stroke-opacity="0.45" />
+            <text class="lbl-faint" x="576" y="42">seq 29</text>
+            <text class="lbl-faint" x="719.6" y="42" text-anchor="end">seq 34</text>
+          </g>
+          <text class="lbl-faint" x="700" y="122" text-anchor="end">~9K tokens</text>
+        </svg>
+      </div>
+      <figcaption>The raw rows for sequence 1–28 are never deleted — only the request built for the model gets shorter.
+        A human running <code>sessions show --full</code> still sees all 34.</figcaption>
+    </figure>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Step</th>
+            <th>What happens</th>
+            <th>Row written / read</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Trigger</td>
+            <td>Turn's inputTokens ≥ ~70% of contextWindow</td>
+            <td>read <code>AgentTurn.inputTokens</code>, <code>ModelCatalog.contextWindow</code></td>
+          </tr>
+          <tr>
+            <td>Summarize</td>
+            <td>provider call over messages seq 1–28</td>
+            <td>read <code>AgentMessage</code> where sequence ≤ 28</td>
+          </tr>
+          <tr>
+            <td>Store</td>
+            <td>insert one new row, nothing else touched</td>
+            <td><code>AgentSessionCompaction{summary, coversFromSequence:1, coversToSequence:28}</code></td>
+          </tr>
+          <tr>
+            <td>Next context build</td>
+            <td>newest compaction + everything after it</td>
+            <td>summary text + <code>AgentMessage</code> where sequence > 28</td>
+          </tr>
+          <tr>
+            <td>Recover raw detail</td>
+            <td>bypass compaction entirely</td>
+            <td><code>sessions show --full</code> reads <code>AgentMessage</code> with no lower bound</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  Reviewed against <code>packages/database/prisma/schema.prisma</code> and the
+  session/interaction/turn/message design agreed earlier in this thread. Say the word
+  and I'll apply the eight fixes directly to the schema.
+</footer>
