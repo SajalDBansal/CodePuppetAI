@@ -1,3 +1,4 @@
+import z from "zod"
 
 export type JsonObject = Record<string, unknown>
 
@@ -21,4 +22,12 @@ export type ProviderToolDefinition = {
     name: string
     description: string
     inputSchema: ToolInputJson
+}
+
+export const ToolCategorySchema = z.enum(["file", "process", "git", "backend", "user"])
+export type ToolCategory = z.infer<typeof ToolCategorySchema>;
+
+export type ToolDefinition = {
+    name: string;
+    category: ToolCategory
 }
