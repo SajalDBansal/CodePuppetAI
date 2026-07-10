@@ -1,4 +1,4 @@
-import { ProviderStreamRequest } from "./types.js"
+import { ProviderStreamRequest } from "@workspace/protocol"
 
 export function getSystemPrompt(request: ProviderStreamRequest): string | undefined {
     const systemMessages = request.messages.filter(message => message.role === "system").map(message => message.content)

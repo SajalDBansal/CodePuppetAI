@@ -1,5 +1,5 @@
-import { ProviderToolDefinition } from "@workspace/tool-registry";
-import { ProviderAdapter, ProviderCredentials, ProviderStopReason, ProviderStreamEvent, ProviderStreamRequest } from "../types.js";
+import { ProviderToolDefinition } from "@workspace/protocol";
+import { ProviderAdapter, ProviderCredentials, ProviderStopReason, ProviderStreamEvent, ProviderStreamRequest } from "@workspace/protocol";
 import { Content, FinishReason, GenerateContentResponseUsageMetadata, GoogleGenAI, Tool } from "@google/genai";
 import { getSystemPrompt } from "../utils.js";
 

@@ -1,5 +1,5 @@
 
-import { ProviderAdapter, ProviderCredentials, ProviderStreamEvent, ProviderStreamRequest } from "../types.js";
+import { ProviderAdapter, ProviderCredentials, ProviderStreamEvent, ProviderStreamRequest } from "@workspace/protocol";
 
 import OpenAI from "openai";
 

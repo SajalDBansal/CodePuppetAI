@@ -1,4 +1,4 @@
-import { ProviderErrorCode } from "./types.js";
+import { ProviderErrorCode } from "@workspace/protocol";
 
 export class ProviderError extends Error {
     constructor(

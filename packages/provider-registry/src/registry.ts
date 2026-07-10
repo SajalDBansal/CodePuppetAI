@@ -1,5 +1,5 @@
 import { ProviderAlreadyRegisteredError, ProviderNotRegisteredError, toProviderError } from "./error.js";
-import { ProviderAdapter, ProviderCredentials, ProviderStreamEvent, ProviderStreamRequest } from "./types.js";
+import { ProviderAdapter, ProviderCredentials, ProviderStreamEvent, ProviderStreamRequest } from "@workspace/protocol";
 
 export class ProviderRegistry {
     private readonly adapters = new Map<string, ProviderAdapter>;

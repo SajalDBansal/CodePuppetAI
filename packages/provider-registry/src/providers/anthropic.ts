@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { ProviderAdapter, ProviderCredentials, ProviderStopReason, ProviderStreamEvent, ProviderStreamRequest } from "../types.js";
+import { ProviderAdapter, ProviderCredentials, ProviderStopReason, ProviderStreamEvent, ProviderStreamRequest } from "@workspace/protocol";
 
 type AnthropicClientGenerator = (apiKey: string) => Anthropic
 
