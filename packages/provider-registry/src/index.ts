@@ -4,6 +4,7 @@ import { OpenaiProvider } from "./providers/openai.js";
 import { ProviderRegistry } from "./registry.js"
 
 export * from "./error.js"
+export * from "./registry.js";
 
 export function createProviderRegistery(): ProviderRegistry {
     return new ProviderRegistry([

@@ -1,3 +1,5 @@
+import { createProviderRegistery, ProviderRegistry } from "@workspace/provider-registry";
+import { createToolRegistry, ToolRegistry } from "@workspace/tool-registry";
 import z from "zod";
 
 const EnvironmentSchema = z.object({
@@ -31,3 +33,6 @@ if (masterKey.length < 32) {
 }
 
 export const environment = parsedEnvironment.data;
+
+export const providerRegistry: ProviderRegistry = createProviderRegistery();
+export const toolRegistry: ToolRegistry = createToolRegistry();
