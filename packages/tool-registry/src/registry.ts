@@ -1,5 +1,5 @@
 import { ToolAlreadyRegisteredError, ToolNotRegisteredError } from "./error.js";
-import { ProviderToolDefinition, ToolCategory, ToolDefinition } from "./types.js";
+import { ProviderToolDefinition, ToolCategory, ToolDefinition } from "@workspace/protocol";
 
 export class ToolRegistry {
     private readonly tools = new Map<string, ToolDefinition>;
