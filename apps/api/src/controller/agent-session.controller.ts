@@ -6,6 +6,7 @@ import { validate } from "../utils/validate.js";
 import { NotFoundError } from "../utils/api-error.js";
 import { decryptCredential } from "../service/credential-vault.js";
 import { providerRegistry, toolRegistry } from "../utils/environment.js";
+import { SYSTEM_PROMPTS } from "../utils/system-promt.js";
 
 // writes one Server-Sent-Event frame to the client
 function sendEvent(response: Response, event: ProviderStreamEvent): void {
@@ -99,7 +100,7 @@ export class AgentSessionController {
             {
                 modelId: input.modelId,
                 messages,
-                systemPrompt: input.systemPrompt,
+                systemPrompt: (SYSTEM_PROMPTS[input.mode] + input.systemPrompt),
                 tools: toolRegistry.getProviderTools(),
                 temperature: input.temperature,
                 maxOutputTokens: input.maxOutputTokens,
