@@ -14,7 +14,7 @@ export type ProviderToolDefinition = {
     inputSchema: ToolInputJson
 }
 
-export type JsonObject = Record<string, unknown>
+type JsonObject = Record<string, unknown>
 
 // the actual tool call submitted by the provider to be called (with the filled arguments)
 export type ProviderToolCall = {
