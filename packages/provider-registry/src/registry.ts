@@ -44,7 +44,7 @@ export class ProviderRegistry {
         yield { type: "stream_started", providerId };
 
         if (signal?.aborted) {
-            yield { type: "done", stopReason: "cancelled" }
+            yield { type: "done", stopReason: "CANCELLED" }
             return;
         }
 
@@ -54,7 +54,7 @@ export class ProviderRegistry {
             const providerError = toProviderError(providerId, error);
 
             if (providerError.code === "request_cancelled") {
-                yield { type: "done", stopReason: "cancelled" }
+                yield { type: "done", stopReason: "CANCELLED" }
                 return
             }
 
@@ -65,7 +65,7 @@ export class ProviderRegistry {
                 message: providerError.message,
                 retryable: providerError.retryable,
             }
-            yield { type: "done", stopReason: "error" }
+            yield { type: "done", stopReason: "ERROR" }
 
         }
 

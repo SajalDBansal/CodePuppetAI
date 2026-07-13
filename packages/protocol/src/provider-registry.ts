@@ -40,13 +40,13 @@ export type ProviderMessage = SystemMessage | UserMessage | AssistantMessage | T
 export type ProviderCredentials = { apiKey: string }
 
 export type ProviderStopReason =
-    | "end_turn"
-    | "tool_use"
-    | "max_tokens"
-    | "stop_sequence"
-    | "cancelled"
-    | "error"
-    | "unknown"
+    | "END_TURN"
+    | "TOOL_USE"
+    | "MAX_TOKENS"
+    | "STOP_SEQUENCE"
+    | "CANCELLED"
+    | "ERROR"
+    | "UNKNOWN"
 
 export type JsonObject = Record<string, unknown>
 

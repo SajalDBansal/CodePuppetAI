@@ -82,7 +82,7 @@ export class GoogleProvider implements ProviderAdapter {
         yield {
             type: "done",
             responseId,
-            stopReason: hasToolCalls ? "tool_use" : mapGoogleStopReason(finishReason)
+            stopReason: hasToolCalls ? "TOOL_USE" : mapGoogleStopReason(finishReason)
         }
     }
 }
@@ -155,7 +155,7 @@ function toGoogleTools(tools?: ProviderToolDefinition[]): Tool[] | undefined {
 }
 
 function mapGoogleStopReason(finishReason: FinishReason | undefined): ProviderStopReason {
-    if (finishReason === FinishReason.STOP) return "end_turn"
-    if (finishReason === FinishReason.MAX_TOKENS) return "max_tokens"
-    return "unknown"
+    if (finishReason === FinishReason.STOP) return "END_TURN"
+    if (finishReason === FinishReason.MAX_TOKENS) return "MAX_TOKENS"
+    return "UNKNOWN"
 }
