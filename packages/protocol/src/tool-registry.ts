@@ -30,4 +30,10 @@ export type ToolCategory = z.infer<typeof ToolCategorySchema>;
 export type ToolDefinition = {
     name: string;
     category: ToolCategory
+    description: string
+    inputSchema: ToolInputJson
+    execute: (args: JsonObject) => Promise<string>
 }
+
+export const ThinkingLevelSchema = z.enum(["INSTANT", "MID", "HIGH"]);
+export type ThinkingLevel = z.infer<typeof ThinkingLevelSchema>;

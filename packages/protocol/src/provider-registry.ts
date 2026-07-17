@@ -1,4 +1,4 @@
-import { ProviderToolCall, ProviderToolDefinition } from "@workspace/protocol";
+import { ProviderToolCall, ProviderToolDefinition, ThinkingLevel } from "@workspace/protocol";
 
 export type ProviderErrorCode =
     | "authentication_failed"
@@ -104,6 +104,7 @@ export type ProviderStreamRequest = {
     tools?: ProviderToolDefinition[]
     temperature?: number
     maxOutputTokens?: number
+    thinkingLevel?: ThinkingLevel
 }
 
 export interface ProviderAdapter {
