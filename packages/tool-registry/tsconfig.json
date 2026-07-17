@@ -1,7 +1,12 @@
 {
   "extends": "@workspace/typescript-config/base.json",
   "compilerOptions": {
-    "noEmit": true
+    "noEmit": true,
+    "types": [
+      "node"
+    ]
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ]
 }

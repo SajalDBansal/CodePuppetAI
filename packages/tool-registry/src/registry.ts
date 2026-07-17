@@ -34,7 +34,13 @@ export class ToolRegistry {
         return category ? tools.filter(tool => tool.category === category) : tools
     }
 
-    getProviderTools(): ProviderToolDefinition[] { return [] }
+    getProviderTools(): ProviderToolDefinition[] {
+        return this.list().map((tool) => ({
+            name: tool.name,
+            description: tool.description,
+            inputSchema: tool.inputSchema,
+        }))
+    }
     getBackendTools() { }
     getClientTools() { }
     resolve() { }

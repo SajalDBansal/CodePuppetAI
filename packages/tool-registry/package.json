@@ -13,5 +13,7 @@
         "zod": "^4.4.3",
         "@workspace/protocol": "*"
     },
-    "devDependencies": {}
+    "devDependencies": {
+        "@types/node": "^20.11.24"
+    }
 }

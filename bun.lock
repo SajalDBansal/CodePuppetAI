@@ -195,6 +195,9 @@
         "@workspace/protocol": "*",
         "zod": "^4.4.3",
       },
+      "devDependencies": {
+        "@types/node": "^20.11.24",
+      },
     },
     "packages/typescript-config": {
       "name": "@workspace/typescript-config",
