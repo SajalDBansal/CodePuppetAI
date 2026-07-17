@@ -1,4 +1,4 @@
-import { ProviderToolDefinition } from "@workspace/protocol";
+import { ProviderToolDefinition, ThinkingLevel } from "@workspace/protocol";
 import { ProviderAdapter, ProviderCredentials, ProviderStopReason, ProviderStreamEvent, ProviderStreamRequest } from "@workspace/protocol";
 import { Content, FinishReason, GenerateContentResponseUsageMetadata, GoogleGenAI, Tool } from "@google/genai";
 import { getSystemPrompt } from "../utils.js";
@@ -26,7 +26,8 @@ export class GoogleProvider implements ProviderAdapter {
                 systemInstruction: getSystemPrompt(request),
                 temperature: request.temperature,
                 maxOutputTokens: request.maxOutputTokens,
-                tools: toGoogleTools(request.tools)
+                tools: toGoogleTools(request.tools),
+                thinkingConfig: toGeminiThinkingConfig(request.thinkingLevel),
             }
         });
 
@@ -158,4 +159,29 @@ function mapGoogleStopReason(finishReason: FinishReason | undefined): ProviderSt
     if (finishReason === FinishReason.STOP) return "END_TURN"
     if (finishReason === FinishReason.MAX_TOKENS) return "MAX_TOKENS"
     return "UNKNOWN"
+}
+
+function toGeminiThinkingConfig(level?: ThinkingLevel) {
+    if (!level) return undefined
+
+    switch (level) {
+        case "INSTANT":
+            return {
+                thinkingBudget: 1024,
+            }
+
+        case "MID":
+            return {
+                thinkingBudget: 4096,
+            }
+
+        case "HIGH":
+            return {
+                thinkingBudget: 8192,
+            }
+        default:
+            return {
+                thinkingBudget: 1024,
+            }
+    }
 }
