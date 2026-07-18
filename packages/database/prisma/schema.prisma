@@ -28,7 +28,6 @@ model User {
   deviceCodes         DeviceCode[]
   providerCredentials ProviderCredential[]
   auditLogs           AuditLog[]
-  usageEvents         UsageEvent[]
 
   @@unique([email])
   @@map("user")
@@ -234,7 +233,6 @@ model AgentSession {
   turns         AgentTurn[]
   messages      AgentMessage[]
   compactions   AgentSessionCompaction[]
-  usageEvents   UsageEvent[]
 
   @@index([userId, status, lastMessageAt])
 }
@@ -256,8 +254,8 @@ model AgentInteraction {
   thinkingLevel   ThinkingLevel
   temperature     Float?
   maxOutputTokens Int?
-  inputTokens     Int?
-  outputTokens    Int?
+  inputTokens     Int               @default(0)
+  outputTokens    Int               @default(0)
   status          InteractionStatus @default(RUNNING)
   startedAt       DateTime          @default(now())
   completedAt     DateTime?
@@ -298,7 +296,6 @@ model AgentTurn {
   session     AgentSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   interaction AgentInteraction @relation(fields: [interactionId], references: [id], onDelete: Cascade)
   messages    AgentMessage[]
-  usageEvents UsageEvent[]
 
   @@unique([interactionId, sequence])
   @@index([interactionId])
@@ -345,25 +342,4 @@ model AgentSessionCompaction {
   session AgentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId, coversToSequence])
-}
-
-model UsageEvent {
-  id         String   @id @default(uuid())
-  sessionId  String
-  turnId     String?
-  userId     String
-  providerId String?
-  modelId    String?
-  costUsd    Decimal  @default(0) @db.Decimal(14, 8)
-  latencyMs  Int?
-  metadata   Json? // dont know if required or not
-  createdAt  DateTime @default(now())
-
-  session AgentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  turn    AgentTurn?   @relation(fields: [turnId], references: [id], onDelete: SetNull)
-  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([sessionId, createdAt])
-  @@index([turnId])
-  @@index([userId, createdAt])
 }
