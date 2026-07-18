@@ -7,7 +7,9 @@ const agentSessionRouter: Router = Router();
 const controller = new AgentSessionController();
 
 agentSessionRouter.use(requireAuthentication);
-agentSessionRouter.get("/", asyncHandler(controller.listSessions));
+agentSessionRouter.get("/", asyncHandler(controller.getSessionMetadata));
+agentSessionRouter.get("/usage", asyncHandler(controller.usage));
+agentSessionRouter.get("/:sessionId", asyncHandler(controller.getSessionByIdData));
 agentSessionRouter.post("/", asyncHandler(controller.startSession));
 agentSessionRouter.post("/:sessionId/interactions", asyncHandler(controller.continueSession));
 
