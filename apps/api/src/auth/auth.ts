@@ -4,8 +4,6 @@ import { prisma } from "@workspace/database";
 import { admin, bearer, deviceAuthorization } from "better-auth/plugins";
 import { environment } from "../utils/environment.js";
 
-export const CLI_CLIENT_ID = "deepmind-cli"
-
 const authOptions = {
     appName: environment.APP_NAME,
     baseURL: environment.BETTER_AUTH_URL,
