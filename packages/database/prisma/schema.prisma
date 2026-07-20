@@ -28,6 +28,8 @@ model User {
   deviceCodes         DeviceCode[]
   providerCredentials ProviderCredential[]
   auditLogs           AuditLog[]
+  agentSessions       AgentSession[]
+  agentUsages         AgentUsage[]
 
   @@unique([email])
   @@map("user")
@@ -234,6 +236,9 @@ model AgentSession {
   messages      AgentMessage[]
   compactions   AgentSessionCompaction[]
 
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agentUsages AgentUsage[]
+
   @@index([userId, status, lastMessageAt])
 }
 
@@ -261,13 +266,15 @@ model AgentInteraction {
   completedAt     DateTime?
   credentialId    String?
 
-  credential ProviderCredential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
-  session    AgentSession        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  turns      AgentTurn[]
-  messages   AgentMessage[]
+  credential  ProviderCredential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
+  session     AgentSession        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  turns       AgentTurn[]
+  messages    AgentMessage[]
+  agentUsages AgentUsage[]
 
   @@unique([sessionId, sequence])
   @@index([sessionId, startedAt])
+  @@index([credentialId])
 }
 
 enum StopReason {
@@ -281,24 +288,22 @@ enum StopReason {
 }
 
 model AgentTurn {
-  id              String      @id @default(uuid())
-  sessionId       String
-  interactionId   String
-  sequence        Int
-  responseId      String?
-  stopReason      StopReason?
-  inputTokens     Int         @default(0)
-  outputTokens    Int         @default(0)
-  cachedTokens    Int         @default(0)
-  reasoningTokens Int         @default(0)
-  createdAt       DateTime    @default(now())
+  id            String      @id @default(uuid())
+  sessionId     String
+  interactionId String
+  sequence      Int
+  responseId    String?
+  stopReason    StopReason?
+  createdAt     DateTime    @default(now())
 
   session     AgentSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   interaction AgentInteraction @relation(fields: [interactionId], references: [id], onDelete: Cascade)
   messages    AgentMessage[]
+  agentUsages AgentUsage[]
 
   @@unique([interactionId, sequence])
   @@index([interactionId])
+  @@index([sessionId])
 }
 
 enum MessageRole {
@@ -329,6 +334,7 @@ model AgentMessage {
 
   @@unique([sessionId, sequence])
   @@index([interactionId, sequence])
+  @@index([turnId])
 }
 
 model AgentSessionCompaction {
@@ -342,4 +348,32 @@ model AgentSessionCompaction {
   session AgentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId, coversToSequence])
+}
+
+model AgentUsage {
+  id            String @id @default(uuid())
+  userId        String
+  sessionId     String
+  interactionId String
+  turnId        String
+  providerId    String
+  modelId       String
+
+  inputTokens     Int @default(0)
+  outputTokens    Int @default(0)
+  cachedTokens    Int @default(0)
+  reasoningTokens Int @default(0)
+
+  inputCost  Decimal @default(0) @db.Decimal(18, 8)
+  outputCost Decimal @default(0) @db.Decimal(18, 8)
+  totalCost  Decimal @default(0) @db.Decimal(18, 8)
+
+  createdAt DateTime @default(now())
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session     AgentSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  interaction AgentInteraction @relation(fields: [interactionId], references: [id], onDelete: Cascade)
+  turn        AgentTurn        @relation(fields: [turnId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
