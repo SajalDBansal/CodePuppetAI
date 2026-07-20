@@ -67,6 +67,20 @@ export const openaiModelCatalogSeed: SeedModel[] = [{
 
 {
     providerId: "openai",
+    modelId: "gpt-5.4-mini",
+    displayName: "GPT-5.4 Mini",
+    description: "Fast, low-cost OpenAI model for quick edits, simple tool use, and latency-sensitive agent turns.",
+    supportsTools: true,
+    contextWindow: 400_000,
+    maxOutputTokens: 128_000,
+    inputCostPer1M: 0.25,
+    outputCostPer1M: 2,
+    enabled: true,
+    isDefault: false,
+},
+
+{
+    providerId: "openai",
     modelId: "gpt-5.3-codex",
     displayName: "GPT-5.3 Codex",
     description: "OpenAI coding-focused model optimized for software engineering and autonomous coding agents.",
