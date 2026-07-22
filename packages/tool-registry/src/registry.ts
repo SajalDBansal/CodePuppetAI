@@ -41,8 +41,4 @@ export class ToolRegistry {
             inputSchema: tool.inputSchema,
         }))
     }
-    getBackendTools() { }
-    getClientTools() { }
-    resolve() { }
-
 }
