@@ -44,6 +44,59 @@ export const SessionIdParamsSchema = z.object({
     sessionId: z.uuid(),
 })
 
-export const ListSessionHistoryParamsSchema = z.object({
-    sessionId: z.string().trim().min(1).max(120).optional()
-})
+export type UsageStats = {
+    inputTokens: number;
+    outputTokens: number;
+    cachedTokens: number;
+    reasoningTokens: number;
+    totalTokens: number;
+
+    inputCost: number;
+    outputCost: number;
+    totalCost: number;
+}
+
+export type ModelUsage = UsageStats & {
+    providerId: string;
+    modelId: string;
+};
+
+export type ProviderUsage = UsageStats & {
+    providerId: string;
+};
+
+export type SessionUsage = {
+    sessionId: string;
+    title: string | null;
+    status: string;
+    createdAt: Date;
+    lastMessageAt: Date;
+
+    total: UsageStats;
+
+    byModels: Record<string, ModelUsage>;
+    byProviders: Record<string, ProviderUsage>;
+};
+
+export type UserUsageResponse = {
+    userId: string;
+
+    total: UsageStats;
+
+    byModels: Record<string, ModelUsage>;
+    byProviders: Record<string, ProviderUsage>;
+
+    sessions: SessionUsage[];
+};
+
+export const emptyUsage = (): UsageStats => ({
+    inputTokens: 0,
+    outputTokens: 0,
+    cachedTokens: 0,
+    reasoningTokens: 0,
+    totalTokens: 0,
+
+    inputCost: 0,
+    outputCost: 0,
+    totalCost: 0,
+});
