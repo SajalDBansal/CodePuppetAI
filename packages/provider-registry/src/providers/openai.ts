@@ -34,9 +34,21 @@ export class OpenaiProvider implements ProviderAdapter {
             },
         }, { signal });
 
+        // response.function_call_arguments.* events key off item_id (the output
+        // item's own id), but tool_call_start/tool_call/tool_call events elsewhere
+        // in this protocol are keyed by call_id - response.output_item.added is the
+        // one event that carries both together, so it's tracked here to translate
+        // the later item_id-keyed delta events back to the same call_id.
+        const callIdByItemId = new Map<string, string>();
+
         for await (const event of stream) {
             if (event.type === "response.output_text.delta") {
                 yield { type: "text_delta", text: event.delta }
+            } else if (event.type === "response.output_item.added" && event.item.type === "function_call") {
+                if (event.item.id) callIdByItemId.set(event.item.id, event.item.call_id);
+                yield { type: "tool_call_start", id: event.item.call_id, name: event.item.name }
+            } else if (event.type === "response.function_call_arguments.delta") {
+                yield { type: "tool_call_delta", id: callIdByItemId.get(event.item_id) ?? event.item_id, argumentsDelta: event.delta }
             }
         }
 
@@ -157,13 +169,13 @@ function toOpenaiThinkingConfig(level?: ThinkingLevel): ReasoningEffort {
 
     switch (level) {
         case "INSTANT":
-            return "medium"
+            return "minimal"
 
         case "MID":
-            return "high"
+            return "medium"
 
         case "HIGH":
-            return "xhigh"
+            return "high"
         default:
             return "medium"
     }
