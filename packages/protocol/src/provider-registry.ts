@@ -9,6 +9,7 @@ export type ProviderErrorCode =
     | "context_length_exceeded"
     | "provider_unavailable"
     | "request_cancelled"
+    | "database_persistence_failed"
     | "unknown"
 
 export type SystemMessage = {
