@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { prisma, type StopReason, type Prisma } from "@workspace/database";
-import { StartSessionSchema, ContinueSessionSchema, SessionIdParamsSchema, type ProviderMessage, type ProviderStreamEvent, type ProviderToolCall, ThinkingLevel, ListSessionHistoryParamsSchema } from "@workspace/protocol";
+import { StartSessionSchema, ContinueSessionSchema, SessionIdParamsSchema, type ProviderMessage, type ProviderStreamEvent, type ProviderToolCall, ThinkingLevel, emptyUsage, ModelUsage, ProviderUsage, SessionUsage, UsageStats, type AgentCallMode, type ProviderToolDefinition, type ToolCategory } from "@workspace/protocol";
 import { requireUserId } from "../utils/request.js";
 import { validate } from "../utils/validate.js";
 import { NotFoundError, ConflictError } from "../utils/api-error.js";
@@ -16,9 +16,11 @@ function sendEvent(response: Response, event: ProviderStreamEvent): void {
 type ProviderTurnCall = {
     request: Request
     response: Response
+    userId: string
     credential: { apiKey: string, id: string }
     providerId: string
     modelId: string
+    mode: AgentCallMode
     systemPrompt: string
     messages: ProviderMessage[]
     sessionId: string
@@ -28,6 +30,28 @@ type ProviderTurnCall = {
     temperature?: number
     maxOutputTokens?: number
     thinkingLevel?: ThinkingLevel
+}
+
+const MODE_TOOL_CATEGORIES: Record<AgentCallMode, ToolCategory[]> = {
+    ASK: [],
+    PLAN: ["file-read", "backend"],
+    CODE: ["file-read", "file-update", "process", "backend", "user"],
+    AUTO: ["file-read", "file-update", "process", "backend", "user"],
+}
+
+function getToolsForMode(mode: AgentCallMode): ProviderToolDefinition[] {
+    const allowedCategories = MODE_TOOL_CATEGORIES[mode];
+    if (allowedCategories.length === 0) {
+        return [];
+    }
+    return toolRegistry
+        .list()
+        .filter((tool) => allowedCategories.includes(tool.category))
+        .map((tool) => ({
+            name: tool.name,
+            description: tool.description,
+            inputSchema: tool.inputSchema,
+        }));
 }
 
 async function runTurn(params: ProviderTurnCall): Promise<void> {
@@ -43,6 +67,7 @@ async function runTurn(params: ProviderTurnCall): Promise<void> {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
+        "X-Session-Id": sessionId,
     });
 
     const abortController = new AbortController();
@@ -63,7 +88,7 @@ async function runTurn(params: ProviderTurnCall): Promise<void> {
             modelId: params.modelId,
             messages: params.messages,
             systemPrompt: params.systemPrompt,
-            tools: toolRegistry.getProviderTools(),
+            tools: getToolsForMode(params.mode),
             temperature: params.temperature,
             maxOutputTokens: params.maxOutputTokens,
             thinkingLevel: params.thinkingLevel
@@ -72,101 +97,198 @@ async function runTurn(params: ProviderTurnCall): Promise<void> {
         abortController.signal,
     );
 
-    for await (const event of stream) {
-        sendEvent(response, event);
+    try {
+        for await (const event of stream) {
+            sendEvent(response, event);
 
-        if (event.type === "text_delta") {
-            textBuffer += event.text;
-        } else if (event.type === "tool_call") {
-            toolCalls.push({ id: event.id, name: event.name, arguments: event.arguments });
-        } else if (event.type === "usage") {
-            usageInfo = event;
-        } else if (event.type === "error") {
-            errorInfo = { code: event.code, message: event.message };
-        } else if (event.type === "done") {
-            stopReason = event.stopReason;
-            responseId = event.responseId;
+            if (event.type === "text_delta") {
+                textBuffer += event.text;
+            } else if (event.type === "tool_call") {
+                toolCalls.push({ id: event.id, name: event.name, arguments: event.arguments });
+            } else if (event.type === "usage") {
+                usageInfo = event;
+            } else if (event.type === "error") {
+                errorInfo = { code: event.code, message: event.message };
+            } else if (event.type === "done") {
+                stopReason = event.stopReason;
+                responseId = event.responseId;
+            }
+        }
+    } catch (error) {
+        console.log(error);
+        if (!errorInfo) {
+            errorInfo = { code: "stream_failed", message: "The provider stream ended unexpectedly." };
         }
     }
 
-    const interactionStatus = errorInfo ? "ERROR" : stopReason === "TOOL_USE" ? "RUNNING" : "COMPLETED";
+    const interactionStatus = errorInfo ? "ERROR" :
+        stopReason === "TOOL_USE" ? "RUNNING" :
+            stopReason === "CANCELLED" ? "CANCELLED" :
+                "COMPLETED";
 
-    await prisma.$transaction(async (tx) => {
-        const turn = await tx.agentTurn.create({
-            data: {
-                sessionId,
-                interactionId,
-                sequence: turnSequence,
-                responseId,
-                stopReason,
-                inputTokens: usageInfo?.inputTokens ?? 0,
-                outputTokens: usageInfo?.outputTokens ?? 0,
-                cachedTokens: usageInfo?.cachedTokens ?? 0,
-                reasoningTokens: usageInfo?.reasoningTokens ?? 0,
-            },
-        });
-
-        let nextSequence = params.nextMessageSequence;
-
-        if (textBuffer) {
-            await tx.agentMessage.create({
+    try {
+        await prisma.$transaction(async (tx) => {
+            const turn = await tx.agentTurn.create({
                 data: {
                     sessionId,
                     interactionId,
-                    turnId: turn.id,
-                    sequence: nextSequence++,
-                    role: "ASSISTANT",
-                    content: textBuffer,
-                    isError: errorInfo ? true : undefined,
+                    sequence: turnSequence,
+                    responseId,
+                    stopReason,
                 },
             });
-        }
 
-        if (toolCalls.length > 0) {
-            await tx.agentMessage.create({
+            let nextSequence = params.nextMessageSequence;
+
+            if (textBuffer) {
+                await tx.agentMessage.create({
+                    data: {
+                        sessionId,
+                        interactionId,
+                        turnId: turn.id,
+                        sequence: nextSequence++,
+                        role: "ASSISTANT",
+                        content: textBuffer,
+                        isError: errorInfo ? true : undefined,
+                    },
+                });
+            }
+
+            if (toolCalls.length > 0) {
+                await tx.agentMessage.create({
+                    data: {
+                        sessionId,
+                        interactionId,
+                        turnId: turn.id,
+                        sequence: nextSequence++,
+                        role: "ASSISTANT",
+                        toolCalls: toolCalls as Prisma.InputJsonValue,
+                        isError: errorInfo ? true : undefined,
+                    },
+                });
+            }
+
+            await tx.agentInteraction.update({
+                where: { id: interactionId },
                 data: {
-                    sessionId,
-                    interactionId,
-                    turnId: turn.id,
-                    sequence: nextSequence++,
-                    role: "ASSISTANT",
-                    toolCalls: toolCalls as Prisma.InputJsonValue,
-                    isError: errorInfo ? true : undefined,
+                    status: interactionStatus,
+                    completedAt: interactionStatus === "RUNNING" ? undefined : new Date(),
+                    inputTokens: { increment: usageInfo?.inputTokens ?? 0 },
+                    outputTokens: { increment: usageInfo?.outputTokens ?? 0 },
                 },
             });
+
+            await tx.agentSession.update({
+                where: { id: sessionId },
+                data: { lastMessageAt: new Date() },
+            });
+
+            await tx.providerCredential.update({
+                where: { id: params.credential.id },
+                data: { lastUsedAt: new Date() }
+            })
+
+            if (usageInfo) {
+                const modelPricing = await tx.modelCatalog.findUnique({
+                    where: {
+                        providerId_modelId: {
+                            providerId: params.providerId,
+                            modelId: params.modelId
+                        }
+                    },
+                    select: {
+                        inputCostPer1M: true,
+                        outputCostPer1M: true
+                    },
+                });
+
+                const inputCost = modelPricing?.inputCostPer1M
+                    ? (usageInfo.inputTokens / 1_000_000) * Number(modelPricing.inputCostPer1M)
+                    : 0;
+                const outputCost = modelPricing?.outputCostPer1M
+                    ? (usageInfo.outputTokens / 1_000_000) * Number(modelPricing.outputCostPer1M)
+                    : 0;
+
+                await tx.agentUsage.create({
+                    data: {
+                        userId: params.userId,
+                        sessionId,
+                        interactionId,
+                        turnId: turn.id,
+                        providerId: params.providerId,
+                        modelId: params.modelId,
+                        inputTokens: usageInfo.inputTokens,
+                        outputTokens: usageInfo.outputTokens,
+                        cachedTokens: usageInfo.cachedTokens,
+                        reasoningTokens: usageInfo.reasoningTokens ?? 0,
+                        inputCost,
+                        outputCost,
+                        totalCost: inputCost + outputCost,
+                    },
+                });
+            }
+        });
+    } catch (error) {
+        console.log(error);
+        if (!response.writableEnded) {
+            sendEvent(response, {
+                type: "error",
+                message: "Error in storing the interaction details in the database",
+                retryable: false,
+                providerId: params.providerId,
+                code: "database_persistence_failed"
+            })
         }
+    } finally {
+        response.end();
+    }
+}
 
-        await tx.agentInteraction.update({
-            where: { id: interactionId },
-            data: {
-                status: interactionStatus,
-                completedAt: interactionStatus === "RUNNING" ? undefined : new Date(),
-                inputTokens: { increment: usageInfo?.inputTokens ?? 0 },
-                outputTokens: { increment: usageInfo?.outputTokens ?? 0 },
-            },
-        });
+function toUsageStats(usage: {
+    inputTokens: number;
+    outputTokens: number;
+    cachedTokens: number;
+    reasoningTokens: number;
+    inputCost: unknown;
+    outputCost: unknown;
+    totalCost: unknown;
+}): UsageStats {
+    const inputTokens = usage.inputTokens;
+    const outputTokens = usage.outputTokens;
 
-        await tx.agentSession.update({
-            where: { id: sessionId },
-            data: { lastMessageAt: new Date() },
-        });
+    return {
+        inputTokens,
+        outputTokens,
+        cachedTokens: usage.cachedTokens,
+        reasoningTokens: usage.reasoningTokens,
 
-        await tx.providerCredential.update({
-            where: { id: params.credential.id },
-            data: { lastUsedAt: new Date() }
-        })
+        totalTokens: inputTokens + outputTokens,
 
+        inputCost: Number(usage.inputCost),
+        outputCost: Number(usage.outputCost),
+        totalCost: Number(usage.totalCost),
+    };
+}
 
-    });
+function addUsage(target: UsageStats, source: UsageStats) {
+    target.inputTokens += source.inputTokens;
+    target.outputTokens += source.outputTokens;
+    target.cachedTokens += source.cachedTokens;
+    target.reasoningTokens += source.reasoningTokens;
 
-    response.end();
+    target.totalTokens = target.inputTokens + target.outputTokens;
+
+    target.inputCost += source.inputCost;
+    target.outputCost += source.outputCost;
+    target.totalCost += source.totalCost;
 }
 
 export class AgentSessionController {
     getSessionMetadata = async (request: Request, response: Response): Promise<Response> => {
         const userId = requireUserId(request);
-        const data = await prisma.agentSession.findFirst({
+        const data = await prisma.agentSession.findMany({
             where: { userId },
+            orderBy: { createdAt: "desc" },
             select: {
                 id: true,
                 providerId: true,
@@ -179,16 +301,12 @@ export class AgentSessionController {
             }
         })
 
-        if (!data) {
-            throw new NotFoundError("Session not found.");
-        }
-
         return response.status(200).json(data)
     }
 
     getSessionByIdData = async (request: Request, response: Response): Promise<Response> => {
         const userId = requireUserId(request);
-        const query = validate(ListSessionHistoryParamsSchema, request.query);
+        const query = validate(SessionIdParamsSchema, request.params);
         const data = await prisma.agentSession.findFirst({
             where: {
                 id: query.sessionId,
@@ -234,10 +352,6 @@ export class AgentSessionController {
                                 sequence: true,
                                 responseId: true,
                                 stopReason: true,
-                                inputTokens: true,
-                                outputTokens: true,
-                                cachedTokens: true,
-                                reasoningTokens: true,
                                 createdAt: true,
                             },
                         },
@@ -276,12 +390,157 @@ export class AgentSessionController {
             throw new NotFoundError("Session not found.");
         }
 
-        return response.status(200).json(data)
+        const usageRows = await prisma.agentUsage.findMany({
+            where: { sessionId: query.sessionId, userId },
+            select: {
+                providerId: true,
+                modelId: true,
+                inputTokens: true,
+                outputTokens: true,
+                cachedTokens: true,
+                reasoningTokens: true,
+                inputCost: true,
+                outputCost: true,
+                totalCost: true,
+            },
+        });
+
+        const usageTotal = emptyUsage();
+        const usageByModels: Record<string, ModelUsage> = {};
+        const usageByProviders: Record<string, ProviderUsage> = {};
+
+        for (const row of usageRows) {
+            const rowUsage = toUsageStats(row);
+            addUsage(usageTotal, rowUsage);
+
+            const modelKey = `${row.providerId}:${row.modelId}`;
+            const modelUsage = usageByModels[modelKey] ??= { providerId: row.providerId, modelId: row.modelId, ...emptyUsage() };
+            addUsage(modelUsage, rowUsage);
+
+            const providerUsage = usageByProviders[row.providerId] ??= { providerId: row.providerId, ...emptyUsage() };
+            addUsage(providerUsage, rowUsage);
+        }
+
+        return response.status(200).json({
+            ...data,
+            usage: {
+                total: usageTotal,
+                byModels: usageByModels,
+                byProviders: usageByProviders,
+            },
+        })
     }
 
     usage = async (request: Request, response: Response): Promise<Response> => {
-        // we will implement the cost usage and other details here will not store these data directly in the database
-        return response.status(200).json({});
+        const userId = requireUserId(request);
+
+        const usageRows = await prisma.agentUsage.findMany({
+            where: { userId },
+            select: {
+                id: true,
+                sessionId: true,
+                interactionId: true,
+                turnId: true,
+                providerId: true,
+                modelId: true,
+                inputTokens: true,
+                outputTokens: true,
+                cachedTokens: true,
+                reasoningTokens: true,
+                inputCost: true,
+                outputCost: true,
+                totalCost: true,
+                createdAt: true,
+
+                session: {
+                    select: {
+                        id: true,
+                        title: true,
+                        status: true,
+                        createdAt: true,
+                        lastMessageAt: true,
+                    },
+                },
+            },
+            orderBy: { createdAt: "asc" }
+        });
+
+        const total = emptyUsage();
+        const byModels: Record<string, ModelUsage> = {}
+        const byProviders: Record<string, ProviderUsage> = {}
+        const sessions = new Map<string, SessionUsage>();
+
+        for (const row of usageRows) {
+            const usage = toUsageStats(row);
+            // Overall usage
+            addUsage(total, usage);
+
+            // Model usage
+            const modelKey = `${row.providerId}:${row.modelId}`;
+
+            const modelUsage =
+                byModels[modelKey] ??= {
+                    providerId: row.providerId,
+                    modelId: row.modelId,
+                    ...emptyUsage(),
+                };
+
+            addUsage(modelUsage, usage);
+
+            // Provider usage
+            const providerUsage =
+                byProviders[row.providerId] ??= {
+                    providerId: row.providerId,
+                    ...emptyUsage(),
+                };
+
+            addUsage(providerUsage, usage);
+
+            let session = sessions.get(row.sessionId);
+            if (!session) {
+                session = {
+                    sessionId: row.session.id,
+                    title: row.session.title,
+                    status: row.session.status,
+                    createdAt: row.session.createdAt,
+                    lastMessageAt: row.session.lastMessageAt,
+                    total: emptyUsage(),
+                    byModels: {},
+                    byProviders: {},
+                }
+                sessions.set(row.sessionId, session);
+            }
+
+            addUsage(session.total, usage);
+
+            // Session → model usage
+            const sessionModelUsage =
+                session.byModels[modelKey] ??= {
+                    providerId: row.providerId,
+                    modelId: row.modelId,
+                    ...emptyUsage(),
+                };
+
+            addUsage(sessionModelUsage, usage);
+
+            // Session → provider usage
+            const sessionProviderUsage =
+                session.byProviders[row.providerId] ??= {
+                    providerId: row.providerId,
+                    ...emptyUsage(),
+                };
+
+            addUsage(sessionProviderUsage, usage);
+
+        }
+
+        return response.status(200).json({
+            userId,
+            total,
+            byModels,
+            byProviders,
+            sessions: Array.from(sessions.values()),
+        });
     }
 
     startSession = async (request: Request, response: Response): Promise<Response> => {
@@ -357,9 +616,11 @@ export class AgentSessionController {
         await runTurn({
             request,
             response,
+            userId,
             credential: { apiKey, id: credential.id },
             providerId: input.providerId,
             modelId: input.modelId,
+            mode: input.mode,
             systemPrompt: `${SYSTEM_PROMPTS[input.mode]}\n\n${input.systemPrompt ?? ""}`.trim(),
             messages: [{ role: "user", content: input.message }],
             sessionId: session.id,
@@ -379,18 +640,20 @@ export class AgentSessionController {
         const { sessionId } = validate(SessionIdParamsSchema, request.params);
         const input = validate(ContinueSessionSchema, request.body);
 
-        const session = await prisma.agentSession.findFirst({ where: { id: sessionId, userId } });
+        // session, latestInteraction, and lastMessage are all independent reads
+        // keyed off sessionId alone - only the credential lookup below needs
+        // session.providerId, so it's the one query that has to wait
+        const [session, latestInteraction, lastMessage] = await Promise.all([
+            prisma.agentSession.findFirst({ where: { id: sessionId, userId } }),
+            prisma.agentInteraction.findFirst({ where: { sessionId }, orderBy: { sequence: "desc" } }),
+            prisma.agentMessage.findFirst({ where: { sessionId }, orderBy: { sequence: "desc" } }),
+        ]);
         if (!session) {
             throw new NotFoundError("Session not found.");
         }
         if (session.status !== "ACTIVE") {
             throw new ConflictError("This session is archived and cannot be continued.");
         }
-
-        const latestInteraction = await prisma.agentInteraction.findFirst({
-            where: { sessionId },
-            orderBy: { sequence: "desc" },
-        });
 
         const credential = await prisma.providerCredential.findFirst({
             where: { userId, providerId: session.providerId, label: input.credentialLabel },
@@ -401,7 +664,6 @@ export class AgentSessionController {
 
         // sequence numbers are session-wide for messages, per-interaction for turns -
         // work out where each counter currently stands before writing anything
-        const lastMessage = await prisma.agentMessage.findFirst({ where: { sessionId }, orderBy: { sequence: "desc" } });
         let nextMessageSequence = (lastMessage?.sequence ?? 0) + 1;
 
         // assigned by whichever branch below runs
@@ -434,24 +696,33 @@ export class AgentSessionController {
                     return byId;
                 }, {});
 
-            // "backend" tools are executed by the API itself, not the CLI - everything
-            // else (file/process/git/user) was already run locally, so its content is
-            // trusted as-is. A failed or unavailable backend tool becomes a normal
-            // isError result, never a thrown exception - the interaction must not crash.
             const resolvedToolResults = await Promise.all(input.toolResults.map(async (result) => {
-                const tool = toolRegistry.get(result.name);
-                if (tool.category !== "backend") {
-                    return result;
-                }
-
                 try {
-                    const tool = toolRegistry.get(result.name); // throws ToolNotRegisteredError if unknown
+                    const tool = toolRegistry.get(result.name);
+                    if (tool.category !== "backend") {
+                        return result;
+                    }
+
                     const args = toolCallArguments[result.toolCallId];
                     if (!args) {
                         throw new Error("No matching pending tool call found for this result.");
                     }
-                    const output = await tool.execute(args);
-                    return { ...result, content: output, isError: false };
+                    const output = await tool.execute(args, {
+                        session: {
+                            id: sessionId,
+                            userId,
+                            getMessages: async ({ fromSequence, toSequence }) => {
+                                const messages = await prisma.agentMessage.findMany({
+                                    where: { sessionId, sequence: { gte: fromSequence, lte: toSequence } },
+                                    orderBy: { sequence: "asc" },
+                                    select: { sequence: true, role: true, content: true },
+                                    take: 500,
+                                });
+                                return messages;
+                            },
+                        },
+                    });
+                    return { ...result, content: output.content, isError: output.isError ?? false };
                 } catch (error) {
                     return {
                         ...result,
@@ -500,28 +771,36 @@ export class AgentSessionController {
                 throw new ConflictError("The model do not support the max output token as the user served");
             }
 
-            interaction = await prisma.agentInteraction.create({
-                data: {
-                    sessionId,
-                    sequence: (latestInteraction?.sequence ?? 0) + 1,
-                    providerId: input.providerId ?? session.providerId,
-                    modelId: input.modelId ?? session.modelId,
-                    mode: input.mode,
-                    thinkingLevel: input.thinkingLevel,
-                    temperature: input.temperature,
-                    maxOutputTokens: input.maxOutputTokens,
-                    credentialId: credential.id,
-                },
-            });
-            await prisma.agentMessage.create({
-                data: {
-                    sessionId,
-                    interactionId: interaction.id,
-                    sequence: nextMessageSequence++,
-                    role: "USER",
-                    content: input.message!,
-                },
-            });
+            const newInteraction = await prisma.$transaction(async (tx) => {
+                const newInteraction = await tx.agentInteraction.create({
+                    data: {
+                        sessionId,
+                        sequence: (latestInteraction?.sequence ?? 0) + 1,
+                        providerId: input.providerId ?? session.providerId,
+                        modelId: input.modelId ?? session.modelId,
+                        mode: input.mode,
+                        thinkingLevel: input.thinkingLevel,
+                        temperature: input.temperature,
+                        maxOutputTokens: input.maxOutputTokens,
+                        credentialId: credential.id,
+                    },
+                });
+
+                await tx.agentMessage.create({
+                    data: {
+                        sessionId,
+                        interactionId: newInteraction.id,
+                        sequence: nextMessageSequence++,
+                        role: "USER",
+                        content: input.message!,
+                    },
+                });
+
+                return newInteraction;
+            })
+
+            interaction = newInteraction;
+
             turnSequence = 1;
         }
 
@@ -544,9 +823,11 @@ export class AgentSessionController {
         await runTurn({
             request,
             response,
+            userId,
             credential: { apiKey, id: credential.id },
             providerId: interaction.providerId,
             modelId: interaction.modelId,
+            mode: interaction.mode,
             systemPrompt: `${SYSTEM_PROMPTS[interaction.mode]}\n\n${session.systemPrompt ?? ""}`.trim(),
             messages,
             sessionId: session.id,
