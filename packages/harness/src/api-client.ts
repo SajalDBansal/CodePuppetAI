@@ -1,5 +1,5 @@
 import { HarnessApiError } from "./error.js";
-import { BootstrapConfiguration, CatalogModelSchema, CatalogProviderSchema, CredentialMetadata, CredentialMetadataSchema, DeviceLoginStart, HarnessUser, HarnessUserSchema } from "./types.js";
+import { BootstrapConfiguration, CatalogModelSchema, CatalogProviderSchema, ContinueSessionInput, CredentialMetadata, CredentialMetadataSchema, DeviceLoginStart, HarnessUser, HarnessUserSchema, ProviderStreamEvent, SessionDetail, SessionSummary, SessionSummarySchema, StartSessionInput, StreamHandle } from "./types.js";
 
 export interface ApiClientOptions {
     baseUrl: string
@@ -93,7 +93,24 @@ export class APIClient {
         return response.deleteCount;
     }
 
-    async listSessionHistory() { }
+    async listSessions(): Promise<SessionSummary[]> {
+        const response = await this.request<unknown[]>("/agent-session");
+        return response.map((session) => SessionSummarySchema.parse(session));
+    }
+
+    async getSession(sessionId: string): Promise<SessionDetail> {
+        return this.request<SessionDetail>(`/agent-session/${sessionId}`);
+    }
+
+    async startSession(input: StartSessionInput, signal?: AbortSignal): Promise<StreamHandle> {
+        const response = await this.streamRequest("/agent-session", { body: input, signal });
+        return { sessionId: response.headers.get("x-session-id"), events: parseEventStream(response) };
+    }
+
+    async continueSession(sessionId: string, input: ContinueSessionInput, signal?: AbortSignal): Promise<StreamHandle> {
+        const response = await this.streamRequest(`/agent-session/${sessionId}/interactions`, { body: input, signal });
+        return { sessionId: response.headers.get("x-session-id") ?? sessionId, events: parseEventStream(response) };
+    }
 
     async checkLive(): Promise<boolean> {
         try {
@@ -148,6 +165,73 @@ export class APIClient {
             throw new HarnessApiError(failure.message, response.status, failure.code)
         }
         return (await response.json()) as T
+    }
+
+    private async streamRequest(path: string, options: { body?: unknown, signal?: AbortSignal } = {}): Promise<Response> {
+        const headers = new Headers({ Accept: "text/event-stream", "Content-Type": "application/json" })
+        const token = await this.getAccessToken?.()
+        if (token) headers.set("Authorization", `Bearer ${token}`)
+
+        let response: Response
+        try {
+            response = await fetch(`${this.baseUrl}${path}`, {
+                method: "POST",
+                headers,
+                body: JSON.stringify(options.body ?? {}),
+                signal: options.signal,
+            })
+        } catch (error) {
+            if (error instanceof Error && error.name === "AbortError") throw error;
+            const message = error instanceof Error ? error.message : String(error);
+            throw new HarnessApiError(`Cannot reach the backend: ${message}`, 0);
+        }
+
+        if (!response.ok) {
+            const failure = await parseError(response)
+            throw new HarnessApiError(failure.message, response.status, failure.code)
+        }
+        return response
+    }
+}
+
+async function* parseEventStream(response: Response): AsyncGenerator<ProviderStreamEvent> {
+    if (!response.body) {
+        throw new HarnessApiError("The backend did not return a streamable response body.", response.status);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+
+            let separatorIndex: number;
+            while ((separatorIndex = buffer.indexOf("\n\n")) !== -1) {
+                const frame = buffer.slice(0, separatorIndex);
+                buffer = buffer.slice(separatorIndex + 2);
+
+                const payload = frame
+                    .split("\n")
+                    .filter((line) => line.startsWith("data:"))
+                    .map((line) => line.slice(5).trimStart())
+                    .join("\n");
+
+                if (!payload) continue;
+
+                try {
+                    yield JSON.parse(payload) as ProviderStreamEvent;
+                } catch {
+                    // malformed frame - skip it rather than aborting the whole stream
+                }
+            }
+        }
+    } finally {
+        reader.releaseLock();
     }
 }
 
