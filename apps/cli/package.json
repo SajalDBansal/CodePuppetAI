@@ -32,6 +32,8 @@
     "@workspace/eslint-config": "*",
     "@workspace/jest-presets": "*",
     "@workspace/harness": "*",
+    "@workspace/protocol": "*",
+    "@workspace/tool-registry": "*",
     "@workspace/typescript-config": "*",
     "esbuild": "^0.20.1",
     "esbuild-register": "^3.5.0",

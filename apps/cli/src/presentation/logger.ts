@@ -32,6 +32,10 @@ export class Logger {
         if (!this.quiet) this.write(this.stdout, message)
     }
 
+    stream(chunk: string): void {
+        if (!this.quiet) this.stdout.write(chunk)
+    }
+
     heading(message: string): void {
         this.plain(this.color.bold.cyan(message))
     }
