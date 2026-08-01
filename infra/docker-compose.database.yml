@@ -1,3 +1,5 @@
+name: code-puppet
+
 services:
   db:
     platform: linux/amd64
