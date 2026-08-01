@@ -31,10 +31,10 @@ export function DeviceApproval({ apiBaseUrl, initialCode }: Props) {
     setMessage("")
     try {
       const response = await fetch(
-        `${apiBaseUrl}/api/v1/cli/login/verify?userCode=${encodeURIComponent(trimmed)}`,
+        `${apiBaseUrl}/api/v1/device-login/verify?userCode=${encodeURIComponent(trimmed)}`,
         { credentials: "include" },
       )
-      if (response.status === 403) {
+      if (response.status === 401) {
         const redirectTo = `/device?user_code=${encodeURIComponent(trimmed)}`
         router.push(`/signin?redirect=${encodeURIComponent(redirectTo)}`)
         return
@@ -57,7 +57,7 @@ export function DeviceApproval({ apiBaseUrl, initialCode }: Props) {
     setBusy(true)
     setMessage("")
     try {
-      const response = await fetch(`${apiBaseUrl}/api/v1/cli/login/decision`, {
+      const response = await fetch(`${apiBaseUrl}/api/v1/device-login/decision`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

@@ -22,7 +22,7 @@ export const createServer = (): Express => {
     }))
     .all("/api/v1/auth/*", toNodeHandler(auth))
     .use(urlencoded({ extended: true }))
-    .use(json({ limit: "1mb" }))
+    .use(json({ limit: "5mb" }))
     .use("/api/v1", appRouter)
     .use(notFoundHandler)
     .use(errorHandler);

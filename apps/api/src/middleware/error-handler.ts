@@ -37,6 +37,11 @@ export const errorHandler = (
         stack: err.stack,
     })
 
+    if (response.headersSent) {
+        response.end();
+        return;
+    }
+
     response.status(statusCode).json({
         success: false,
         error: { code, message },

@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { validate } from "../utils/validate.js";
-import { DeviceLoginDecisionSchema, DeviceLoginStartSchema, DeviceLoginTokenSchema } from "@workspace/protocol";
+import { DeviceLoginDecisionSchema, DeviceLoginStartSchema, DeviceLoginTokenSchema, DeviceLoginVerificationSchema } from "@workspace/protocol";
 import { fromNodeHeaders } from "better-auth/node";
 import { auth } from "../auth/auth.js";
 import { prisma } from "@workspace/database";
@@ -53,7 +53,7 @@ export class DeviceLoginController {
     }
 
     verify = async (request: Request, response: Response): Promise<Response> => {
-        const input = validate(DeviceLoginDecisionSchema, request.query);
+        const input = validate(DeviceLoginVerificationSchema, request.query);
         const headers = fromNodeHeaders(request.headers);
 
         const result = await auth.api.deviceVerify({ query: { user_code: input.userCode }, headers });
