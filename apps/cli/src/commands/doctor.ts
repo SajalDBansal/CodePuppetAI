@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import { apiUrl, harness, logger } from "../utils/context.js";
 import { access, constants } from "node:fs/promises"
+import { createToolRegistry } from "@workspace/tool-registry";
 
 
 interface DoctorCheck {
@@ -56,11 +57,11 @@ export function doctorCommand(program: Command) {
                     status: catalog ? "ok" : "warning",
                     detail: catalog ? `${catalog.providers.length} providers, fetched ${catalog.fetchedAt}` : "Created during init",
                 },
-                // {
-                //     check: "Tool registry",
-                //     status: "ok",
-                //     detail: `${createToolRegistry().list().length} tools registered`,
-                // },
+                {
+                    check: "Tool registry",
+                    status: "ok",
+                    detail: `${createToolRegistry().list().length} tools registered`,
+                },
             ]
             if (config) {
                 checks.push(...(await workspaceChecks(config.workspaceRoots)))

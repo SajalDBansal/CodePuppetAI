@@ -26,14 +26,17 @@ export const processTools: ToolDefinition[] = [
         },
         zodSchema: bashSchema,
         requiresConfirmation: true,
-        execute: async (args) => {
+        execute: async (args, context) => {
             const parsed = bashSchema.safeParse(args);
             if (!parsed.success) {
                 return { content: "", isError: true, message: "The \"command\" argument must be a non-empty string." };
             }
 
             try {
-                const { stdout, stderr } = await execAsync(parsed.data.command, { timeout: parsed.data.timeout ?? 10_000 });
+                const { stdout, stderr } = await execAsync(parsed.data.command, {
+                    timeout: parsed.data.timeout ?? 10_000,
+                    cwd: context.workspaceRoot,
+                });
                 const content = [stdout, stderr].filter(Boolean).join("\n").trim() || "(no output)";
                 return { content, isError: false, message: "Command completed." };
             } catch (error) {

@@ -3,6 +3,7 @@ import { harness, logger } from "../utils/context.js";
 import { formatNumber } from "../utils/format.js";
 import { CliUsageError } from "../utils/error.js";
 import { CatalogProvider } from "@workspace/harness";
+import { createToolRegistry } from "@workspace/tool-registry";
 
 interface ListOptions {
     providers?: boolean
@@ -82,17 +83,15 @@ async function loadCatalogProviders(): Promise<CatalogProvider[]> {
 }
 
 function listTools(): void {
-    // const tools = createToolRegistry().list()
+    const tools = createToolRegistry().list()
     logger.heading("Registered tools")
-    // logger.table(
-    //     ["Name", "Category", "Affinity", "Execution", "Environments", "Confirm"],
-    //     tools.map((tool) => [
-    //         tool.name,
-    //         tool.category,
-    //         tool.affinity,
-    //         tool.execution,
-    //         tool.allowedEnvironments.join(", "),
-    //         tool.requiresConfirmation ? "yes" : "no",
-    //     ])
-    // )
+    logger.table(
+        ["Name", "Category", "Description", "Confirm"],
+        tools.map((tool) => [
+            tool.name,
+            tool.category,
+            tool.description,
+            tool.requiresConfirmation ? "yes" : "no",
+        ])
+    )
 }

@@ -47,7 +47,7 @@ export class CatalogController {
             return tx.providerCatalog.create({ data: input });
         })
         await recordAuditEvent(request, "provider.created", "ProviderCatalog", provider.id);
-        return response.status(200).json({ provider })
+        return response.status(201).json({ provider })
     }
 
     updateProvider = async (request: Request, response: Response): Promise<Response> => {
@@ -74,7 +74,7 @@ export class CatalogController {
             where: { providerId }
         });
         if (result.count === 0) {
-            throw new NotFoundError("The provider weas not found.");
+            throw new NotFoundError("The provider was not found.");
         }
         await recordAuditEvent(request, "provider.deleted", "ProviderCatalog", providerId)
         return response.status(204).send()
@@ -97,7 +97,7 @@ export class CatalogController {
             })
         })
         await recordAuditEvent(request, "model.created", "ModelCatalog", model.id)
-        return response.status(200).json({})
+        return response.status(201).json({ model })
     }
 
     updateModel = async (request: Request, response: Response): Promise<Response> => {
