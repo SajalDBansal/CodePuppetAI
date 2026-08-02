@@ -25,14 +25,10 @@ export class AuthStore {
     }
 
     async set(value: AuthSession): Promise<void> {
-        try {
-            const parsed = AuthSessionSchema.parse(value)
-            const directory = path.dirname(this.filePath);
-            await fs.ensureDir(directory);
-            await fs.writeJSON(this.filePath, parsed, { spaces: 2 })
-        } catch (error) {
-            console.log(error);
-        }
+        const parsed = AuthSessionSchema.parse(value)
+        const directory = path.dirname(this.filePath);
+        await fs.ensureDir(directory);
+        await fs.writeJSON(this.filePath, parsed, { spaces: 2 })
     }
 
     async clear(): Promise<void> {

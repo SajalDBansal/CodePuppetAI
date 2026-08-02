@@ -11,7 +11,7 @@ export class APIClient {
     private readonly getAccessToken?: () => Promise<string | null>
 
     constructor(options: ApiClientOptions) {
-        this.baseUrl = options.baseUrl.replace(/\$/, "");
+        this.baseUrl = options.baseUrl.replace(/\/$/, "");
         this.getAccessToken = options.getAccessToken;
     }
 
@@ -89,8 +89,8 @@ export class APIClient {
     }
 
     async removeAllCredentials(): Promise<number> {
-        const response = await this.request<{ deleteCount: number }>(`/credentials`, { method: "DELETE" });
-        return response.deleteCount;
+        const response = await this.request<{ deletedCount: number }>(`/credentials`, { method: "DELETE" });
+        return response.deletedCount;
     }
 
     async listSessions(): Promise<SessionSummary[]> {

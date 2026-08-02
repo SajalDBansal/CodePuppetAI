@@ -1,4 +1,16 @@
 import z from "zod"
+import {
+    AgentCallModeSchema,
+    ThinkingLevelSchema,
+    type AgentCallMode,
+    type ThinkingLevel,
+    type ProviderStopReason,
+    type ProviderErrorCode,
+    type ProviderStreamEvent,
+} from "@workspace/protocol"
+
+export { AgentCallModeSchema, ThinkingLevelSchema }
+export type { AgentCallMode, ThinkingLevel, ProviderStopReason, ProviderErrorCode, ProviderStreamEvent }
 
 export const HarnessUserSchema = z.object({
     id: z.string().min(1),
@@ -81,15 +93,6 @@ export const CatalogSnapshotSchema = z.object({
 })
 
 
-// Kept local to the harness package rather than imported from @workspace/protocol -
-// the CLI only ever talks to the backend over HTTP, so it shouldn't need a
-// dependency on the server-side protocol package just to name these enums.
-export const AgentCallModeSchema = z.enum(["ASK", "PLAN", "CODE", "AUTO"])
-export type AgentCallMode = z.infer<typeof AgentCallModeSchema>
-
-export const ThinkingLevelSchema = z.enum(["INSTANT", "MID", "HIGH"])
-export type ThinkingLevel = z.infer<typeof ThinkingLevelSchema>
-
 export const SessionSummarySchema = z.object({
     id: z.string().min(1),
     providerId: z.string().min(1),
@@ -102,10 +105,6 @@ export const SessionSummarySchema = z.object({
 })
 export type SessionSummary = z.infer<typeof SessionSummarySchema>
 
-// The full session detail mirrors the backend's Prisma `select` shape (session ->
-// interactions -> turns/messages) 1:1. Left as plain interfaces rather than a
-// deep zod schema so a backend field addition doesn't require updating a parser
-// here too - `getSession` trusts the backend's response shape as-is.
 export interface SessionTurn {
     id: string
     sequence: number
@@ -183,37 +182,6 @@ export interface SessionDetail extends SessionSummary {
     compactions: unknown[]
     usage: SessionUsageSummary
 }
-
-export type ProviderStopReason =
-    | "END_TURN"
-    | "TOOL_USE"
-    | "MAX_TOKENS"
-    | "STOP_SEQUENCE"
-    | "CANCELLED"
-    | "ERROR"
-    | "UNKNOWN"
-
-export type ProviderErrorCode =
-    | "authentication_failed"
-    | "permission_denied"
-    | "rate_limited"
-    | "invalid_request"
-    | "model_not_found"
-    | "context_length_exceeded"
-    | "provider_unavailable"
-    | "request_cancelled"
-    | "database_persistence_failed"
-    | "unknown"
-
-export type ProviderStreamEvent =
-    | { type: "stream_started"; providerId: string; responseId?: string }
-    | { type: "text_delta"; text: string }
-    | { type: "tool_call_start"; id: string; name: string }
-    | { type: "tool_call_delta"; id: string; argumentsDelta: string }
-    | { type: "tool_call"; id: string; name: string; arguments: Record<string, unknown>; providerMetadata: Record<string, unknown> }
-    | { type: "usage"; inputTokens: number; outputTokens: number; cachedTokens: number; reasoningTokens?: number }
-    | { type: "error"; providerId: string; code: ProviderErrorCode; message: string; retryable: boolean }
-    | { type: "done"; stopReason: ProviderStopReason; responseId?: string }
 
 export interface StreamHandle {
     sessionId: string | null
