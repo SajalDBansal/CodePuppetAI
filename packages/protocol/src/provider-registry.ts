@@ -97,6 +97,25 @@ export type ProviderStreamEvent =
         stopReason: ProviderStopReason
         responseId?: string
     }
+    | {
+        // the model's reasoning/thinking text, when requested via thinkingLevel -
+        // separate from text_delta so a client can render it distinctly from the
+        // actual reply instead of the two being mixed into one stream
+        type: "reasoning_delta"
+        text: string
+    }
+    | {
+        type: "compaction_started"
+    }
+    | {
+        type: "compaction_delta"
+        text: string
+    }
+    | {
+        type: "compaction_completed"
+        coversFromSequence: number
+        coversToSequence: number
+    }
 
 export type ProviderStreamRequest = {
     modelId: string

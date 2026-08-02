@@ -43,7 +43,9 @@ export class GoogleProvider implements ProviderAdapter {
             finishReason = chunk.candidates?.[0]?.finishReason ?? finishReason
             for (const candidate of chunk.candidates ?? []) {
                 for (const part of candidate.content?.parts ?? []) {
-                    if (part.text && !part.thought) {
+                    if (part.text && part.thought) {
+                        yield { type: "reasoning_delta", text: part.text }
+                    } else if (part.text) {
                         yield { type: "text_delta", text: part.text }
                     }
 
@@ -168,20 +170,24 @@ function toGeminiThinkingConfig(level?: ThinkingLevel) {
         case "INSTANT":
             return {
                 thinkingBudget: 1024,
+                includeThoughts: true,
             }
 
         case "MID":
             return {
                 thinkingBudget: 4096,
+                includeThoughts: true,
             }
 
         case "HIGH":
             return {
                 thinkingBudget: 8192,
+                includeThoughts: true,
             }
         default:
             return {
                 thinkingBudget: 1024,
+                includeThoughts: true,
             }
     }
 }

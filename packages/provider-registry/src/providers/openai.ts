@@ -31,6 +31,7 @@ export class OpenaiProvider implements ProviderAdapter {
             store: false,
             reasoning: {
                 effort: toOpenaiThinkingConfig(request.thinkingLevel),
+                summary: "auto",
             },
         }, { signal });
 
@@ -49,6 +50,8 @@ export class OpenaiProvider implements ProviderAdapter {
                 yield { type: "tool_call_start", id: event.item.call_id, name: event.item.name }
             } else if (event.type === "response.function_call_arguments.delta") {
                 yield { type: "tool_call_delta", id: callIdByItemId.get(event.item_id) ?? event.item_id, argumentsDelta: event.delta }
+            } else if (event.type === "response.reasoning_summary_text.delta") {
+                yield { type: "reasoning_delta", text: event.delta }
             }
         }
 
