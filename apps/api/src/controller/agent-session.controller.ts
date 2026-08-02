@@ -5,6 +5,7 @@ import { requireUserId } from "../utils/request.js";
 import { validate } from "../utils/validate.js";
 import { NotFoundError, ConflictError } from "../utils/api-error.js";
 import { decryptCredential } from "../service/credential-vault.js";
+import { maybeCompactSession, loadSessionMessages } from "../service/compaction.js";
 import { providerRegistry, toolRegistry } from "../utils/environment.js";
 import { SYSTEM_PROMPTS } from "../utils/system-promt.js";
 
@@ -62,13 +63,6 @@ async function runTurn(params: ProviderTurnCall): Promise<void> {
     if (!isProviderAvailable) {
         throw new NotFoundError("The selected provider is not available");
     }
-
-    response.writeHead(200, {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
-        "X-Session-Id": sessionId,
-    });
 
     const abortController = new AbortController();
     request.on("close", () => abortController.abort());
@@ -613,6 +607,13 @@ export class AgentSessionController {
             label: input.credentialLabel,
         });
 
+        response.writeHead(200, {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Session-Id": session.id,
+        });
+
         await runTurn({
             request,
             response,
@@ -640,9 +641,6 @@ export class AgentSessionController {
         const { sessionId } = validate(SessionIdParamsSchema, request.params);
         const input = validate(ContinueSessionSchema, request.body);
 
-        // session, latestInteraction, and lastMessage are all independent reads
-        // keyed off sessionId alone - only the credential lookup below needs
-        // session.providerId, so it's the one query that has to wait
         const [session, latestInteraction, lastMessage] = await Promise.all([
             prisma.agentSession.findFirst({ where: { id: sessionId, userId } }),
             prisma.agentInteraction.findFirst({ where: { sessionId }, orderBy: { sequence: "desc" } }),
@@ -662,11 +660,8 @@ export class AgentSessionController {
             throw new NotFoundError("No credential found for this provider and label.");
         }
 
-        // sequence numbers are session-wide for messages, per-interaction for turns -
-        // work out where each counter currently stands before writing anything
         let nextMessageSequence = (lastMessage?.sequence ?? 0) + 1;
 
-        // assigned by whichever branch below runs
         let interaction: NonNullable<typeof latestInteraction>;
         let turnSequence: number;
 
@@ -684,11 +679,10 @@ export class AgentSessionController {
             });
             turnSequence = (lastTurn?.sequence ?? 0) + 1;
 
-            // the assistant message that ended the previous turn carries the
-            // original tool_call arguments - needed to execute a "backend" tool below
             const toolCallMessages = await prisma.agentMessage.findMany({
                 where: { interactionId: interaction.id, turnId: lastTurn?.id, role: "ASSISTANT" },
             });
+
             const toolCallArguments = toolCallMessages
                 .flatMap((message) => (message.toolCalls as ProviderToolCall[] | null) ?? [])
                 .reduce<Record<string, Record<string, unknown>>>((byId, call) => {
@@ -748,6 +742,7 @@ export class AgentSessionController {
                     }),
                 ),
             );
+
         } else {
             // branch 2: fresh message - fine whether the previous interaction is
             // closed OR there was never one at all; only an open interaction blocks this
@@ -804,21 +799,31 @@ export class AgentSessionController {
             turnSequence = 1;
         }
 
-        // hydrate the full conversation so far - the provider is stateless, so every
-        // turn (including this one) resends the whole history, not just the new part
-        const rows = await prisma.agentMessage.findMany({ where: { sessionId }, orderBy: { sequence: "asc" } });
-        const messages: ProviderMessage[] = rows.map((row) => {
-            if (row.role === "USER") return { role: "user", content: row.content ?? "" };
-            if (row.role === "TOOL") return { role: "tool", toolCallId: row.toolCallId!, name: row.name!, content: row.content ?? "", isError: row.isError ?? undefined };
-            if (row.role === "SYSTEM") return { role: "system", content: row.content ?? "" };
-            return { role: "assistant", content: row.content ?? undefined, toolCalls: (row.toolCalls as ProviderToolCall[]) ?? undefined };
-        });
-
         const apiKey = decryptCredential(credential, {
             userId,
             providerId: session.providerId,
             label: input.credentialLabel,
         });
+
+        response.writeHead(200, {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Session-Id": sessionId,
+        });
+
+        if (!input.toolResults) {
+            await maybeCompactSession({
+                sessionId,
+                providerId: session.providerId,
+                modelId: session.modelId,
+                apiKey,
+                lastInteractionInputTokens: latestInteraction?.inputTokens ?? 0,
+                onEvent: (event) => sendEvent(response, event),
+            });
+        }
+
+        const messages = await loadSessionMessages(sessionId);
 
         await runTurn({
             request,
