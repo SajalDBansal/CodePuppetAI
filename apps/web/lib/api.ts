@@ -8,7 +8,7 @@ export async function parseErrorMessage(response: Response): Promise<string> {
 }
 
 /** Only allow same-origin, absolute-path redirects to avoid an open redirect via `?redirect=`. */
-export function sanitizeRedirect(target: string | undefined, fallback = "/"): string {
+export function sanitizeRedirect(target: string | undefined, fallback = "/ask"): string {
   if (!target) return fallback
   if (!target.startsWith("/") || target.startsWith("//")) return fallback
   return target

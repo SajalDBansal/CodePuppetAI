@@ -1,14 +1,22 @@
-import { Geist, Geist_Mono } from "next/font/google"
+import { Cormorant_Garamond, Inter, JetBrains_Mono, Geist } from "next/font/google"
 
 import "@workspace/ui/globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@workspace/ui/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'})
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
-const fontMono = Geist_Mono({
+const fontSans = Inter({ subsets: ["latin"], variable: "--font-body-sans" })
+
+const fontDisplay = Cormorant_Garamond({
   subsets: ["latin"],
-  variable: "--font-mono",
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-serif-display",
+})
+
+const fontMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-code",
 })
 
 export default function RootLayout({
@@ -20,10 +28,12 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("antialiased", fontMono.variable, "font-sans", geist.variable)}
+      className={cn("antialiased", fontSans.variable, fontDisplay.variable, fontMono.variable, "font-sans", geist.variable)}
     >
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   )
