@@ -34,8 +34,8 @@ type ProviderTurnCall = {
 }
 
 const MODE_TOOL_CATEGORIES: Record<AgentCallMode, ToolCategory[]> = {
-    ASK: [],
-    PLAN: ["file-read", "backend"],
+    ASK: ["backend", "user"],
+    PLAN: ["file-read", "backend", "user"],
     CODE: ["file-read", "file-update", "process", "backend", "user"],
     AUTO: ["file-read", "file-update", "process", "backend", "user"],
 }
