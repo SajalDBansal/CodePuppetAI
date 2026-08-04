@@ -82,19 +82,27 @@ export function sessionCommand(program: Command) {
     session
         .command("continue")
         .description("Continue an existing session with a new message")
-        .argument("<sessionId>", "the session id")
-        .argument("<message>", "the message to send")
         .option("-c, --credential <label>", "credential label to use (defaults to the provider's selected credential)")
         .addOption(new Option("--mode <mode>", "agent mode").choices(["ask", "plan", "code", "auto"]).default("auto"))
         .addOption(new Option("--thinking <level>", "thinking level").choices(["instant", "mid", "high"]).default("mid"))
         .option("--temperature <value>", "sampling temperature (0-2)")
         .option("--max-tokens <value>", "max output tokens for the response")
         .option("--json", "print raw stream events instead of formatted output")
-        .action(async (sessionId: string, message: string, options: ContinueOptions) => {
+        .action(async (options: ContinueOptions) => {
+            const sessions = await harness.api.listSessions();
+            if (sessions.length === 0) {
+                logger.info("No sessions yet. Run 'code-puppet ask <message>' to start one.");
+                return;
+            }
+
+            const sessionId = await pickSession(sessions);
+
             const existing = await harness.api.getSession(sessionId);
             if (existing.status !== "ACTIVE") {
                 throw new CliUsageError(`Session ${shortId(sessionId)} is ${existing.status.toLowerCase()} and cannot be continued.`);
             }
+
+            const message = await askForTextMessage();
 
             const credential = await resolveCredential(existing.providerId, options.credential);
             const auth = await harness.auth.get();
@@ -206,4 +214,16 @@ function speakerLabel(message: SessionMessage): string {
         default:
             return message.role;
     }
+}
+
+async function askForTextMessage() {
+    const answers = await inquirer.prompt<{ message: string }>([
+        {
+            type: "input",
+            name: "message",
+            message: "write the question you want to ask",
+        },
+    ]);
+
+    return answers.message;
 }
