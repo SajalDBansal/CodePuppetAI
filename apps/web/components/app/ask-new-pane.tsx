@@ -102,8 +102,8 @@ export function AskNewPane({ providers, credentials }: { providers: CatalogProvi
 
     if (busy) {
         return (
-            <div className="flex flex-1 flex-col overflow-hidden">
-                <div className="flex-1 overflow-y-auto px-6 py-8">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
                     <div className="mx-auto max-w-2xl space-y-6">
                         {entries.map((entry) =>
                             entry.kind === "activity" ? (

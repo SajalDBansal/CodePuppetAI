@@ -90,7 +90,7 @@ export function AskSessionPane({ session, credentials }: { session: SessionDetai
     }
 
     return (
-        <div className="flex h-full min-w-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <div className="flex flex-wrap items-center gap-3 border-b border-border px-6 py-3">
                 <span className="truncate text-sm font-medium text-foreground">{sessionTitle(session)}</span>
                 <ProviderBadge providerId={session.providerId} model={session.modelId} />
@@ -100,7 +100,7 @@ export function AskSessionPane({ session, credentials }: { session: SessionDetai
                 </span>
             </div>
 
-            <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-8">
+            <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
                 <div className="mx-auto max-w-2xl space-y-6">
                     {entries.map((entry) =>
                         entry.kind === "activity" ? (
