@@ -45,7 +45,7 @@ async function* parseSse(body: ReadableStream<Uint8Array>): AsyncGenerator<Agent
   }
 }
 
-async function openStream(path: string, body: unknown): Promise<{ sessionId: string; events: AsyncGenerator<AgentStreamEvent> }> {
+async function openStream(path: string, body: unknown): Promise<Response> {
   const response = await fetch(`${getApiBaseUrl()}${path}`, {
     method: "POST",
     credentials: "include",
@@ -57,30 +57,33 @@ async function openStream(path: string, body: unknown): Promise<{ sessionId: str
     throw new Error(await parseErrorMessage(response))
   }
 
-  const sessionId = response.headers.get("X-Session-Id")
-  if (!sessionId) {
-    throw new Error("The server did not return a session id.")
-  }
-
-  return { sessionId, events: parseSse(response.body) }
+  return response
 }
 
-export function startAgentTurn(input: {
+export async function startAgentTurn(input: {
   providerId: string
   modelId: string
   credentialLabel: string
   message: string
   thinkingLevel: ThinkingLevel
   title?: string
-}) {
-  return openStream("/api/v1/agent-session", { ...input, mode: "ASK" satisfies AgentMode })
+}): Promise<{ sessionId: string; events: AsyncGenerator<AgentStreamEvent> }> {
+  const response = await openStream("/api/v1/agent-session", { ...input, mode: "ASK" satisfies AgentMode })
+
+  const sessionId = response.headers.get("X-Session-Id")
+  if (!sessionId) {
+    throw new Error("The server did not return a session id.")
+  }
+
+  return { sessionId, events: parseSse(response.body!) }
 }
 
-export function continueAgentTurn(
+export async function continueAgentTurn(
   sessionId: string,
   input: { credentialLabel: string; message: string; thinkingLevel: ThinkingLevel },
-) {
-  return openStream(`/api/v1/agent-session/${sessionId}/interactions`, { ...input, mode: "ASK" satisfies AgentMode })
+): Promise<{ sessionId: string; events: AsyncGenerator<AgentStreamEvent> }> {
+  const response = await openStream(`/api/v1/agent-session/${sessionId}/interactions`, { ...input, mode: "ASK" satisfies AgentMode })
+  return { sessionId, events: parseSse(response.body!) }
 }
 
 export type ToolResultInput = {
@@ -91,9 +94,10 @@ export type ToolResultInput = {
   isError: boolean
 }
 
-export function continueAgentTurnWithToolResults(
+export async function continueAgentTurnWithToolResults(
   sessionId: string,
   input: { credentialLabel: string; toolResults: ToolResultInput[] },
-) {
-  return openStream(`/api/v1/agent-session/${sessionId}/interactions`, { ...input, mode: "ASK" satisfies AgentMode })
+): Promise<{ sessionId: string; events: AsyncGenerator<AgentStreamEvent> }> {
+  const response = await openStream(`/api/v1/agent-session/${sessionId}/interactions`, { ...input, mode: "ASK" satisfies AgentMode })
+  return { sessionId, events: parseSse(response.body!) }
 }
