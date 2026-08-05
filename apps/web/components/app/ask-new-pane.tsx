@@ -136,7 +136,7 @@ export function AskNewPane({ providers, credentials }: { providers: CatalogProvi
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
-                <Select value={providerId} onChange={(key) => changeProvider(String(key))}>
+                <Select aria-label="Provider" value={providerId} onChange={(key) => changeProvider(String(key))}>
                     <SelectTrigger className="w-[150px]">
                         <SelectValue />
                     </SelectTrigger>
@@ -149,7 +149,7 @@ export function AskNewPane({ providers, credentials }: { providers: CatalogProvi
                     </SelectContent>
                 </Select>
 
-                <Select value={modelId} onChange={(key) => setModelId(String(key))}>
+                <Select aria-label="Model" value={modelId} onChange={(key) => setModelId(String(key))}>
                     <SelectTrigger className="w-[210px] font-mono text-xs">
                         <SelectValue />
                     </SelectTrigger>
@@ -164,6 +164,7 @@ export function AskNewPane({ providers, credentials }: { providers: CatalogProvi
 
                 {providerCreds.length > 0 ? (
                     <Select
+                        aria-label="Credential"
                         value={credentialLabel}
                         onChange={(key) => setCredentialLabel(String(key))}
                         placeholder="Credential"

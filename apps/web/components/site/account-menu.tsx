@@ -10,6 +10,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
+import { Button } from "@workspace/ui/components/button";
 import { getApiBaseUrl } from "@/lib/api";
 
 function initials(name: string) {
@@ -44,13 +45,13 @@ export function AccountMenu({ name, email, onNavigate, }: {
 
     return (
         <DropdownMenuTrigger>
-            <button
-                type="button"
+            <Button
+                variant="ghost"
                 aria-label="Account menu"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface-card text-xs font-medium text-foreground"
+                className="h-9 w-9 rounded-full border border-border bg-surface-card text-xs font-medium text-foreground"
             >
                 {initials(name) || "?"}
-            </button>
+            </Button>
             <DropdownMenu placement="bottom end" className="w-56">
                 <DropdownMenuLabel className="font-normal">
                     <div className="text-sm font-medium text-foreground">{name}</div>
