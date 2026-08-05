@@ -37,22 +37,32 @@ src/
   hook.ts             preAction hook: auth/config gating + workspace-trust prompt
   presentation/       logger.ts (colored/quiet output, tables, status), table.ts
   utils/
-    context.ts         env config, shared Harness instance, shared logger
+    context.ts         shared Harness instance, shared logger, ENV_CONFIG
     error.ts, format.ts
+  constants.ts         hardcoded, non-secret defaults (agent name, default API URL) +
+                        the CLI's own version, read straight from package.json
   program.ts          builds the Commander program
   index.ts             process entrypoint (calls runCli)
 ```
 
 All local state (auth token, selected credentials, cached catalog, workspace roots) is delegated to `@workspace/harness`, which the CLI constructs once in `utils/context.ts` and reuses across every command.
 
+### Configuration
+
+Nothing in this CLI is a secret, so nothing needs an `.env` file to run — that matters because once it's installed from npm there's no `.env` to create. `src/constants.ts` hardcodes sensible defaults (agent name, and a `localhost:3001` default backend, since CodePuppet is self-hosted and there's no single "production" API to point at). The only two things worth overriding, and only via a real environment variable (`export CODE_PUPPET_API_URL=...`), are:
+
+| Variable | Default | When you'd set it |
+|---|---|---|
+| `CODE_PUPPET_API_URL` | `http://localhost:3001/api/v1` | Your backend isn't running on localhost:3001 |
+| `AGENT_DEBUG` | unset | Set to `1` for verbose debug logging |
+
 ## Running locally
 
 ```bash
 cd apps/cli
-cp .env.example .env   # CODE_PUPPET_API_URL defaults to http://localhost:3001/api/v1
 bun run dev -- doctor    # or: login, auth add, init, list --tools, config show, etc.
 ```
 
-Requires `apps/api` running locally (see the [root README](../../README.md#local-setup)) and, for `login`, `apps/web` running so the device-approval page is reachable.
+Requires `apps/api` running locally (see the [root README](../../README.md#local-setup)) and, for `login`, `apps/web` running so the device-approval page is reachable. Copy `.env.example` to `.env` only if you need to override the backend URL or turn on debug logging during development.
 
 Other scripts: `bun run typecheck`, `bun run test`.

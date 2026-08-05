@@ -1,12 +1,12 @@
 import { Harness } from "@workspace/harness/store"
 import { Logger } from "../presentation/logger.js";
-
+import { AGENT_NAME, CLI_VERSION, DEFAULT_API_URL } from "../constants.js";
 
 export const ENV_CONFIG = {
-    AGENT_NAME: process.env.AGENT_NAME || "code-puppet",
+    AGENT_NAME,
     AGENT_DEBUG: process.env.AGENT_DEBUG,
-    CODE_PUPPET_API_URL: process.env.CODE_PUPPET_API_URL || "http://localhost:3001/api/v1",
-    VERSION: process.env.VERSION || "0.1.0"
+    CODE_PUPPET_API_URL: process.env.CODE_PUPPET_API_URL || DEFAULT_API_URL,
+    VERSION: CLI_VERSION,
 }
 
 export function resolveApiUrl(): string {
