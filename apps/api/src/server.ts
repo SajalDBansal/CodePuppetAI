@@ -19,6 +19,7 @@ export const createServer = (): Express => {
       origin: environment.WEB_ORIGIN,
       credentials: true,
       methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+      exposedHeaders: ["X-Session-Id"],
     }))
     .all("/api/v1/auth/*", toNodeHandler(auth))
     .use(urlencoded({ extended: true }))
