@@ -36,7 +36,9 @@
       "outputs": [
         "coverage/**"
       ],
-      "dependsOn": []
+      "dependsOn": [
+        "^generate"
+      ]
     },
     "db:migrate:dev": {
       "cache": false
@@ -52,7 +54,8 @@
     },
     "lint": {
       "dependsOn": [
-        "^lint"
+        "^lint",
+        "^generate"
       ]
     },
     "format": {
@@ -62,7 +65,8 @@
     },
     "typecheck": {
       "dependsOn": [
-        "^typecheck"
+        "^typecheck",
+        "^generate"
       ]
     },
     "dev": {
