@@ -82,35 +82,35 @@ jobs:
           cache-from: type=gha,scope=${{ env.IMAGE_NAME }}
           cache-to: type=gha,mode=max,scope=${{ env.IMAGE_NAME }}
 
-  # deploy:
-  #   name: Deploy to EC2
-  #   needs: publish-image
-  #   runs-on: ubuntu-latest
-  #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  deploy:
+    name: Deploy to EC2
+    needs: publish-image
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  #     - name: Copy compose file to EC2
-  #       uses: appleboy/scp-action@v0.1.7
-  #       with:
-  #         host: ${{ secrets.EC2_HOST }}
-  #         username: ${{ secrets.EC2_USER }}
-  #         key: ${{ secrets.EC2_SSH_KEY }}
-  #         source: infra/docker-compose.prod.yml
-  #         target: opt/code-puppet
-  #         overwrite: true
+      - name: Copy compose file to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: infra/docker-compose.prod.yml
+          target: opt/code-puppet
+          overwrite: true
 
-  #     - name: Pull latest images and restart stack
-  #       uses: appleboy/ssh-action@v1.2.0
-  #       with:
-  #         host: ${{ secrets.EC2_HOST }}
-  #         username: ${{ secrets.EC2_USER }}
-  #         key: ${{ secrets.EC2_SSH_KEY }}
-  #         script: |
-  #           set -e
-  #           cd opt/code-puppet
-  #           docker compose -f infra/docker-compose.prod.yml --env-file .env.production pull
-  #           docker compose -f infra/docker-compose.prod.yml --env-file .env.production up -d --remove-orphans
-  #           docker image prune -af --filter "until=24h"
+      - name: Pull latest images and restart stack
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            cd opt/code-puppet
+            docker compose -f infra/docker-compose.prod.yml --env-file .env pull
+            docker compose -f infra/docker-compose.prod.yml --env-file .env up -d --remove-orphans
+            docker image prune -af --filter "until=24h"
