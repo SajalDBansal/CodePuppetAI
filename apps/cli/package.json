@@ -10,11 +10,7 @@
     "dev": "bun src/index.ts",
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "test": "bun test",
     "start": "bun src/index.ts"
-  },
-  "jest": {
-    "preset": "@workspace/jest-presets/node"
   },
   "dependencies": {
     "axios": "^1.19.0",
@@ -30,7 +26,6 @@
     "@types/node": "^26.1.2",
     "@types/supertest": "^6.0.2",
     "@workspace/eslint-config": "*",
-    "@workspace/jest-presets": "*",
     "@workspace/harness": "*",
     "@workspace/protocol": "*",
     "@workspace/tool-registry": "*",
@@ -38,9 +33,7 @@
     "esbuild": "^0.20.1",
     "esbuild-register": "^3.5.0",
     "eslint": "^8.57.0",
-    "jest": "^30.2.0",
     "nodemon": "^3.1.0",
-    "supertest": "^6.3.3",
     "typescript": "5.5.4"
   }
 }
