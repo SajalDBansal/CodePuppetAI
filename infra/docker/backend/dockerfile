@@ -1,0 +1,43 @@
+FROM oven/bun:1-slim AS builder
+
+WORKDIR /app
+
+COPY package.json bun.lock turbo.json ./
+COPY apps/api/package.json apps/api/package.json
+COPY packages/database/package.json packages/database/package.json
+COPY packages/protocol/package.json packages/protocol/package.json
+COPY packages/provider-registry/package.json packages/provider-registry/package.json
+COPY packages/tool-registry/package.json packages/tool-registry/package.json
+COPY packages/typescript-config/package.json packages/typescript-config/package.json
+COPY packages/eslint-config/package.json packages/eslint-config/package.json
+
+ARG DATABASE_URL=postgresql://build:build@localhost:5432/build
+ENV DATABASE_URL=$DATABASE_URL
+
+RUN bun install --frozen-lockfile
+
+COPY apps/api apps/api
+COPY packages/database packages/database
+COPY packages/protocol packages/protocol
+COPY packages/provider-registry packages/provider-registry
+COPY packages/tool-registry packages/tool-registry
+COPY packages/typescript-config packages/typescript-config
+
+RUN cd packages/database && bunx prisma generate --schema prisma/schema.prisma
+
+RUN bunx tsc --noEmit -p apps/api/tsconfig.json
+
+FROM oven/bun:1-slim AS runtime
+
+RUN groupadd -r code-puppet && useradd -r -g code-puppet -m code-puppet
+
+WORKDIR /app
+COPY --chown=code-puppet:code-puppet --from=builder /app /app
+
+USER code-puppet
+
+ENV NODE_ENV=production
+
+EXPOSE 8080
+
+CMD ["bun", "run", "--cwd", "apps/api", "start"]
