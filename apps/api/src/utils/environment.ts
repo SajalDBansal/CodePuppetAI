@@ -16,6 +16,7 @@ const EnvironmentSchema = z.object({
     CLI_CLIENT_ID: z.string().trim().min(1).default("code-puppet"),
     DEVICE_VERIFICATION_URI: z.url(),
     VAULT_MASTER_KEY: z.string().min(1),
+    COOKIE_DOMAIN: z.string().trim().optional(),
 
     // Add sandbox credentials later
 });
