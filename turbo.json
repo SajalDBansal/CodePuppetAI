@@ -7,7 +7,8 @@
     "DATABASE_URL",
     "NODE_ENV",
     "PORT",
-    "WEB_ORIGIN"
+    "WEB_ORIGIN",
+    "VAULT_MASTER_KEY"
   ],
   "ui": "tui",
   "tasks": {
