@@ -23,6 +23,10 @@ env:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    # prisma generate only needs DATABASE_URL to be present, not a real connection -
+    # mirrors the placeholder used in infra/docker/backend/dockerfile.
+    env:
+      DATABASE_URL: postgresql://build:build@localhost:5432/build
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
